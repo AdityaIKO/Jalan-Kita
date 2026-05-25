@@ -1,0 +1,158 @@
+[
+  {
+    "id": "RPT-001",
+    "pelapor": "Budi Santoso",
+    "lokasi": "Jl. Kaliurang KM 12, Sleman, DIY",
+    "timestamp": "2025-05-15T08:23:00",
+    "foto_filename": null,
+    "deteksi": {
+      "tipe_kerusakan": "Lubang (Pothole)",
+      "tingkat_keparahan": "Berat",
+      "estimasi_dimensi": "1.2m x 0.8m x 0.15m",
+      "confidence": "92%",
+      "catatan": "Lubang dalam berpotensi merusak kendaraan dan membahayakan pengendara motor"
+    },
+    "rab": {
+      "material": 1250000,
+      "tenaga_kerja": 600000,
+      "peralatan": 350000,
+      "total": 2200000,
+      "breakdown": [
+        {"item": "Aspal hotmix (AC-BC)", "volume": "0.14 m³", "harga_satuan": 850000, "subtotal": 1190000},
+        {"item": "Agregat base course", "volume": "0.10 m³", "harga_satuan": 600000, "subtotal": 60000},
+        {"item": "Tack coat (aspal cair)", "volume": "0.5 liter", "harga_satuan": 15000, "subtotal": 7500},
+        {"item": "Mandor (1 org, 1 hari)", "volume": "1 OH", "harga_satuan": 200000, "subtotal": 200000},
+        {"item": "Pekerja (2 org, 1 hari)", "volume": "2 OH", "harga_satuan": 150000, "subtotal": 300000},
+        {"item": "Sewa compactor plate", "volume": "1 hari", "harga_satuan": 350000, "subtotal": 350000}
+      ]
+    },
+    "status": "Prioritas Publik",
+    "likes": 134,
+    "sla_hari": 7,
+    "hari_berjalan": 7
+  },
+  {
+    "id": "RPT-002",
+    "pelapor": "Dewi Rahayu",
+    "lokasi": "Jl. Parangtritis KM 5, Bantul, DIY",
+    "timestamp": "2025-05-17T14:05:00",
+    "foto_filename": null,
+    "deteksi": {
+      "tipe_kerusakan": "Retak Buaya (Alligator Crack)",
+      "tingkat_keparahan": "Sedang",
+      "estimasi_dimensi": "3.5m x 2.0m (permukaan)",
+      "confidence": "88%",
+      "catatan": "Pola retak menyebar luas menandakan kelemahan lapisan pondasi, perlu penanganan segera sebelum berkembang menjadi lubang"
+    },
+    "rab": {
+      "material": 3100000,
+      "tenaga_kerja": 900000,
+      "peralatan": 500000,
+      "total": 4500000,
+      "breakdown": [
+        {"item": "Aspal hotmix overlay (AC-WC)", "volume": "0.7 m³", "harga_satuan": 950000, "subtotal": 665000},
+        {"item": "Prime coat", "volume": "2 liter", "harga_satuan": 18000, "subtotal": 36000},
+        {"item": "Material crack filler", "volume": "5 kg", "harga_satuan": 45000, "subtotal": 225000},
+        {"item": "Mandor (1 org, 1 hari)", "volume": "1 OH", "harga_satuan": 200000, "subtotal": 200000},
+        {"item": "Pekerja (3 org, 1.5 hari)", "volume": "4.5 OH", "harga_satuan": 150000, "subtotal": 675000},
+        {"item": "Sewa asphalt finisher", "volume": "0.5 hari", "harga_satuan": 800000, "subtotal": 400000},
+        {"item": "Sewa tandem roller", "volume": "0.5 hari", "harga_satuan": 600000, "subtotal": 300000}
+      ]
+    },
+    "status": "Menunggu",
+    "likes": 47,
+    "sla_hari": 7,
+    "hari_berjalan": 3
+  },
+  {
+    "id": "RPT-003",
+    "pelapor": "Ahmad Fauzi",
+    "lokasi": "Jl. Wonosari KM 8, Gunungkidul, DIY",
+    "timestamp": "2025-05-10T09:45:00",
+    "foto_filename": null,
+    "deteksi": {
+      "tipe_kerusakan": "Lubang (Pothole)",
+      "tingkat_keparahan": "Berat",
+      "estimasi_dimensi": "0.8m x 0.6m x 0.20m",
+      "confidence": "95%",
+      "catatan": "Lubang sangat dalam di area pelosok, jalan satu-satunya akses warga menuju pasar"
+    },
+    "rab": {
+      "material": 980000,
+      "tenaga_kerja": 500000,
+      "peralatan": 320000,
+      "total": 1800000,
+      "breakdown": [
+        {"item": "Aspal hotmix (AC-BC)", "volume": "0.10 m³", "harga_satuan": 850000, "subtotal": 850000},
+        {"item": "Agregat base course", "volume": "0.05 m³", "harga_satuan": 600000, "subtotal": 30000},
+        {"item": "Mandor (1 org, 1 hari)", "volume": "1 OH", "harga_satuan": 200000, "subtotal": 200000},
+        {"item": "Pekerja (2 org, 1 hari)", "volume": "2 OH", "harga_satuan": 150000, "subtotal": 300000},
+        {"item": "Sewa compactor plate", "volume": "1 hari", "harga_satuan": 320000, "subtotal": 320000}
+      ]
+    },
+    "status": "CSR Dashboard",
+    "likes": 89,
+    "sla_hari": 30,
+    "hari_berjalan": 30
+  },
+  {
+    "id": "RPT-004",
+    "pelapor": "Siti Nurhaliza",
+    "lokasi": "Jl. Godean KM 3, Sleman, DIY",
+    "timestamp": "2025-05-19T11:20:00",
+    "foto_filename": null,
+    "deteksi": {
+      "tipe_kerusakan": "Retak Memanjang (Longitudinal Crack)",
+      "tingkat_keparahan": "Ringan",
+      "estimasi_dimensi": "5.0m x 0.02m (lebar retakan)",
+      "confidence": "85%",
+      "catatan": "Retak memanjang di tepi jalur, belum berbahaya namun perlu penanganan preventif"
+    },
+    "rab": {
+      "material": 450000,
+      "tenaga_kerja": 300000,
+      "peralatan": 150000,
+      "total": 900000,
+      "breakdown": [
+        {"item": "Material crack sealant", "volume": "10 kg", "harga_satuan": 35000, "subtotal": 350000},
+        {"item": "Pekerja (2 org, 1 hari)", "volume": "2 OH", "harga_satuan": 150000, "subtotal": 300000},
+        {"item": "Sewa crack router", "volume": "1 hari", "harga_satuan": 150000, "subtotal": 150000}
+      ]
+    },
+    "status": "Selesai",
+    "likes": 23,
+    "sla_hari": 7,
+    "hari_berjalan": 5
+  },
+  {
+    "id": "RPT-005",
+    "pelapor": "Rizki Pratama",
+    "lokasi": "Jl. Solo KM 15, Klaten, Jawa Tengah",
+    "timestamp": "2025-05-20T16:33:00",
+    "foto_filename": null,
+    "deteksi": {
+      "tipe_kerusakan": "Ambles (Settlement)",
+      "tingkat_keparahan": "Berat",
+      "estimasi_dimensi": "2.0m x 1.5m x 0.10m",
+      "confidence": "90%",
+      "catatan": "Penurunan permukaan jalan signifikan, kemungkinan akibat drainase buruk di bawah perkerasan"
+    },
+    "rab": {
+      "material": 2800000,
+      "tenaga_kerja": 1100000,
+      "peralatan": 700000,
+      "total": 4600000,
+      "breakdown": [
+        {"item": "Aspal hotmix (AC-BC)", "volume": "0.30 m³", "harga_satuan": 850000, "subtotal": 2550000},
+        {"item": "Material stabilisasi tanah", "volume": "50 kg", "harga_satuan": 5000, "subtotal": 250000},
+        {"item": "Mandor (1 org, 2 hari)", "volume": "2 OH", "harga_satuan": 200000, "subtotal": 400000},
+        {"item": "Pekerja (3 org, 2 hari)", "volume": "6 OH", "harga_satuan": 150000, "subtotal": 900000},
+        {"item": "Sewa excavator mini", "volume": "1 hari", "harga_satuan": 700000, "subtotal": 700000}
+      ]
+    },
+    "status": "Menunggu",
+    "likes": 12,
+    "sla_hari": 7,
+    "hari_berjalan": 1
+  }
+]
