@@ -1,0 +1,30 @@
+# Environment & secrets
+.env
+
+# Generated data (user reports, accounts & uploaded photos)
+data/reports.json
+data/users.json
+uploads/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.Python
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Node (pptx deck generator in assignment/)
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.cursor/
+.vscode/
+*.swp

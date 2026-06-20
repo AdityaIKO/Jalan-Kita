@@ -1,0 +1,12 @@
+# Pinned theme so the app renders consistently regardless of the visitor's OS
+# dark/light preference. Identity: warm "asphalt + safety-amber on paper".
+[theme]
+base = "light"
+primaryColor = "#B5701A"            # safety amber (dark enough for white text)
+backgroundColor = "#FAF7F2"         # warm paper
+secondaryBackgroundColor = "#F1EBE1" # inputs, expanders, sidebar
+textColor = "#241F18"               # warm near-black ink
+font = "sans serif"
+
+[client]
+toolbarMode = "minimal"

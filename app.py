@@ -15,7 +15,13 @@ from utils.storage import (
     format_rupiah,
     save_report_foto,
     detect_provinsi,
+    severity_sla_days,
+    priority_score,
+    priority_label,
 )
+from utils.geo import parse_latlon
+from utils.ui import inject_css, render_header, PRIO_COLORS, avatar_html
+from utils import auth
 
 st.set_page_config(
     page_title="JalanKita — Laporkan Jalan Rusak",
@@ -24,45 +30,8 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-st.markdown("""
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-  html, body, [class*="css"] { font-family: 'Plus Jakarta Sans', sans-serif; }
-
-  .main-header {
-    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%);
-    padding: 2.5rem 2rem; border-radius: 16px; margin-bottom: 2rem;
-    border: 1px solid rgba(56,189,248,0.15);
-  }
-  .main-header h1 { color: #f0f9ff; font-size: 2rem; font-weight: 800; margin: 0 0 0.25rem 0; }
-  .main-header p { color: #7dd3fc; margin: 0; font-size: 0.95rem; }
-
-  .result-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; }
-
-  .badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
-  .badge-berat { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
-  .badge-sedang { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
-  .badge-ringan { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
-
-  .rab-total { background: linear-gradient(135deg, #0f172a, #1e3a5f); color: white; border-radius: 12px; padding: 1.25rem 1.5rem; text-align: center; margin-top: 1rem; }
-  .rab-total .label { font-size: 0.8rem; color: #7dd3fc; letter-spacing: 1px; text-transform: uppercase; }
-  .rab-total .amount { font-size: 1.75rem; font-weight: 800; color: #f0f9ff; }
-
-  .breakdown-row { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #f1f5f9; font-size: 0.875rem; }
-  .breakdown-row:last-child { border-bottom: none; }
-  .breakdown-item { color: #475569; }
-  .breakdown-amount { color: #0f172a; font-weight: 600; }
-
-  div[data-testid="stButton"] > button {
-    background: linear-gradient(135deg, #0369a1, #0ea5e9); color: white; border: none;
-    border-radius: 10px; padding: 0.6rem 1.5rem; font-weight: 600;
-    font-family: 'Plus Jakarta Sans', sans-serif; transition: all 0.2s; width: 100%;
-  }
-  div[data-testid="stButton"] > button:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(14,165,233,0.35); }
-
-  .success-banner { background: linear-gradient(135deg, #064e3b, #065f46); border: 1px solid #34d399; border-radius: 12px; padding: 1rem 1.5rem; color: #d1fae5; font-weight: 600; margin: 1rem 0; }
-</style>
-""", unsafe_allow_html=True)
+inject_css()
+user = auth.require_auth()
 
 if "analysis_result" not in st.session_state:
     st.session_state.analysis_result = None
@@ -74,21 +43,17 @@ if "uploaded_bytes" not in st.session_state:
     st.session_state.uploaded_bytes = None
 if "report_submitted" not in st.session_state:
     st.session_state.report_submitted = False
+if "demo_mode" not in st.session_state:
+    st.session_state.demo_mode = False
 if "liked_ids" not in st.session_state:
     st.session_state.liked_ids = set()
 
-st.markdown("""
-<div class="main-header">
-  <h1>🛣️ JalanKita</h1>
-  <p>Platform crowdsourcing pelaporan infrastruktur jalan berbasis AI — transparan, akuntabel, frictionless.</p>
-</div>
-""", unsafe_allow_html=True)
-
-col_nav1, col_nav2, col_nav3 = st.columns([1, 1, 4])
-with col_nav1:
-    st.page_link("app.py", label="📋 Laporkan", use_container_width=True)
-with col_nav2:
-    st.page_link("pages/feed.py", label="🗺️ Feed Komunitas", use_container_width=True)
+render_header(
+    "Platform Pelaporan Jalan · Berbasis AI",
+    "🛣️ JalanKita",
+    "Warga memotret jalan rusak, AI mendeteksi kerusakan dan menghitung anggaran perbaikan, lalu laporan masuk ke ruang publik yang transparan dan akuntabel.",
+)
+auth.render_topbar("report")
 
 st.divider()
 
@@ -107,8 +72,25 @@ col_left, col_right = st.columns([1, 1], gap="large")
 
 with col_left:
     st.markdown("#### 📝 Data Laporan")
-    pelapor = st.text_input("Nama Pelapor", placeholder="Masukkan nama Anda")
+    pelapor = user["nama"]
+    av = avatar_html(pelapor, user.get("avatar_color", "#B5701A"), 30)
+    st.markdown(
+        f'<div class="reporter-chip" style="margin:0 0 0.6rem;">{av}'
+        f'Melaporkan sebagai <b style="color:var(--ink);margin-left:0.2rem;">{pelapor}</b></div>',
+        unsafe_allow_html=True,
+    )
     lokasi = st.text_input("Lokasi Jalan", placeholder="Contoh: Jl. Kaliurang KM 12, Sleman, DIY")
+    koordinat = st.text_input(
+        "Koordinat GPS (opsional)",
+        placeholder="Contoh: -7.7560, 110.4090 — tempel dari Google Maps",
+        help="Tempel koordinat agar laporan muncul tepat di peta. Kosongkan untuk perkiraan otomatis dari provinsi.",
+    )
+    if lokasi:
+        prov_preview = detect_provinsi(lokasi)
+        if koordinat and not parse_latlon(koordinat):
+            st.caption("⚠️ Format koordinat tidak valid — gunakan: lat, lon")
+        else:
+            st.caption(f"🗺️ Terdeteksi wilayah: **{prov_preview}**")
 
     st.markdown("#### 📸 Foto Kerusakan")
     uploaded_file = st.file_uploader(
@@ -129,11 +111,11 @@ with col_left:
 
     btn_analyze = st.button(
         "🔍 Analisis dengan AI",
-        disabled=not (uploaded_file and lokasi and pelapor),
+        disabled=not (uploaded_file and lokasi),
         use_container_width=True,
     )
-    if not pelapor or not lokasi or not uploaded_file:
-        st.caption("⚠️ Lengkapi nama, lokasi, dan upload foto untuk melanjutkan.")
+    if not lokasi or not uploaded_file:
+        st.caption("⚠️ Lengkapi lokasi dan unggah foto untuk melanjutkan.")
 
 with col_right:
     st.markdown("#### 🤖 Hasil Analisis AI")
@@ -143,14 +125,25 @@ with col_right:
             result_cv = analyze_image(st.session_state.uploaded_image)
         if result_cv["success"]:
             st.session_state.analysis_result = result_cv["data"]
+            st.session_state.demo_mode = result_cv.get("demo", False)
+            if result_cv.get("warning"):
+                st.warning(result_cv["warning"])
             with st.spinner("📊 LLM sedang menghitung estimasi RAB..."):
                 result_rab = generate_rab(result_cv["data"], lokasi)
             if result_rab["success"]:
                 st.session_state.rab_result = result_rab["data"]
+                if result_rab.get("warning"):
+                    st.warning(result_rab["warning"])
             else:
                 st.error(f"Gagal generate RAB: {result_rab['error']}")
         else:
             st.error(f"Gagal analisis gambar: {result_cv['error']}")
+
+    if st.session_state.get("demo_mode") and st.session_state.analysis_result:
+        st.markdown(
+            '<span class="demo-pill">⚙️ Mode Demo — estimasi heuristik tanpa API key</span>',
+            unsafe_allow_html=True,
+        )
 
     if st.session_state.analysis_result:
         det = st.session_state.analysis_result
@@ -159,19 +152,19 @@ with col_right:
 
         st.markdown(f"""
         <div class="result-card">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-            <strong>Hasil Deteksi CV</strong>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.9rem;">
+            <span class="eyebrow-sm">Hasil Deteksi Computer Vision</span>
             <span class="badge {badge_class}">{sev}</span>
           </div>
-          <table style="width:100%; font-size:0.875rem; border-collapse:collapse;">
-            <tr><td style="color:#64748b; padding:0.3rem 0; width:40%">Tipe Kerusakan</td>
-                <td style="font-weight:600; color:#0f172a">{det.get('tipe_kerusakan','–')}</td></tr>
-            <tr><td style="color:#64748b; padding:0.3rem 0">Estimasi Dimensi</td>
-                <td style="font-weight:600; color:#0f172a">{det.get('estimasi_dimensi','–')}</td></tr>
-            <tr><td style="color:#64748b; padding:0.3rem 0">Confidence AI</td>
-                <td style="font-weight:600; color:#0f172a">{det.get('confidence','–')}</td></tr>
+          <table style="width:100%; font-size:0.9rem; border-collapse:collapse;">
+            <tr><td style="color:var(--ink-soft); padding:0.35rem 0; width:42%">Tipe Kerusakan</td>
+                <td style="font-weight:700; color:var(--ink)">{det.get('tipe_kerusakan','–')}</td></tr>
+            <tr><td style="color:var(--ink-soft); padding:0.35rem 0">Estimasi Dimensi</td>
+                <td style="font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums">{det.get('estimasi_dimensi','–')}</td></tr>
+            <tr><td style="color:var(--ink-soft); padding:0.35rem 0">Confidence AI</td>
+                <td style="font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums">{det.get('confidence','–')}</td></tr>
           </table>
-          <div style="margin-top:0.75rem; padding:0.75rem; background:#f1f5f9; border-radius:8px; font-size:0.825rem; color:#475569; line-height:1.5;">
+          <div class="note" style="margin-top:0.8rem; padding:0.75rem 0.9rem; background:var(--surface-2); border:1px solid var(--line); border-radius:10px;">
             💬 {det.get('catatan','–')}
           </div>
         </div>
@@ -187,13 +180,13 @@ with col_right:
             for item in breakdown:
                 rows_html += f"""
                 <div class="breakdown-row">
-                  <span class="breakdown-item">{item.get('item','–')} <span style="color:#94a3b8">({item.get('volume','–')})</span></span>
+                  <span class="breakdown-item">{item.get('item','–')} <span style="color:var(--ink-faint)">({item.get('volume','–')})</span></span>
                   <span class="breakdown-amount">{format_rupiah(item.get('subtotal', 0))}</span>
                 </div>"""
             st.markdown(f"""
             <div class="result-card">
-              <strong style="font-size:0.875rem; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">Rincian Biaya</strong>
-              <div style="margin-top:0.75rem">{rows_html}</div>
+              <span class="eyebrow-sm">Rincian Biaya</span>
+              <div style="margin-top:0.6rem">{rows_html}</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -201,11 +194,33 @@ with col_right:
         <div class="rab-total">
           <div class="label">Total Estimasi RAB</div>
           <div class="amount">{format_rupiah(rab.get('total', 0))}</div>
-          <div style="font-size:0.75rem; color:#7dd3fc; margin-top:0.25rem;">
+          <div class="sub">
             Material {format_rupiah(rab.get('material',0))} · Tenaga {format_rupiah(rab.get('tenaga_kerja',0))} · Alat {format_rupiah(rab.get('peralatan',0))}
           </div>
         </div>
         """, unsafe_allow_html=True)
+
+        # Auto priority preview based on severity + SLA target.
+        sev = st.session_state.analysis_result.get("tingkat_keparahan", "Sedang")
+        sla_target = severity_sla_days(sev)
+        preview_score = priority_score({
+            "deteksi": st.session_state.analysis_result,
+            "status": "Menunggu",
+            "timestamp": datetime.now().isoformat(),
+            "likes": 0,
+            "sla_hari": sla_target,
+        })
+        prio = priority_label(preview_score)
+        pcolor = PRIO_COLORS.get(prio, "#64748b")
+        st.markdown(
+            f"""<div style="margin-top:0.75rem; display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+              <span class="prio-pill" style="background:{pcolor}1a; color:{pcolor}; border:1px solid {pcolor}55; margin-left:0;">
+                🚦 Prioritas: {prio} ({preview_score})
+              </span>
+              <span style="font-size:0.8rem; color:#64748b;">Target SLA: <b>{sla_target} hari</b> (otomatis dari tingkat keparahan)</span>
+            </div>""",
+            unsafe_allow_html=True,
+        )
 
         st.markdown("<br>", unsafe_allow_html=True)
 
@@ -213,24 +228,30 @@ with col_right:
             reports = load_reports()
             new_id = generate_report_id(reports)
 
-            # Simpan foto sebagai file fisik
+            # Simpan foto sebagai file fisik (dikompres otomatis)
             foto_path = None
             if st.session_state.uploaded_bytes:
                 foto_path = save_report_foto(st.session_state.uploaded_bytes, new_id)
 
+            coords = parse_latlon(koordinat)
             new_report = {
                 "id": new_id,
                 "pelapor": pelapor,
+                "pelapor_username": user["username"],
                 "lokasi": lokasi,
                 "provinsi": detect_provinsi(lokasi),
                 "timestamp": datetime.now().isoformat(),
                 "foto_path": foto_path,
+                "lat": coords[0] if coords else None,
+                "lon": coords[1] if coords else None,
                 "deteksi": st.session_state.analysis_result,
                 "rab": st.session_state.rab_result,
                 "status": "Menunggu",
                 "likes": 0,
-                "sla_hari": 7,
+                "sla_hari": sla_target,
                 "hari_berjalan": 0,
+                "kategori": st.session_state.analysis_result.get("tipe_kerusakan", ""),
+                "demo_mode": st.session_state.get("demo_mode", False),
                 "assigned_to": "",
                 "assigned_by": "",
                 "assignment_notes": "",
@@ -242,8 +263,8 @@ with col_right:
 
     elif not st.session_state.analysis_result:
         st.markdown("""
-        <div style="text-align:center; padding:3rem 1rem; color:#94a3b8;">
-          <div style="font-size:3rem; margin-bottom:1rem;">🔍</div>
-          <div style="font-size:0.9rem;">Hasil analisis AI akan muncul di sini<br>setelah foto diproses</div>
+        <div style="text-align:center; padding:3.5rem 1rem; border:1px dashed var(--line-strong); border-radius:14px; background:var(--surface);">
+          <div style="font-size:2.4rem; margin-bottom:0.8rem; opacity:0.55;">🔍</div>
+          <div style="font-size:0.9rem; color:var(--ink-soft); line-height:1.5;">Hasil analisis AI muncul di sini<br>setelah foto diproses.</div>
         </div>
         """, unsafe_allow_html=True)

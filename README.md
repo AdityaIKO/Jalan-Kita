@@ -35,6 +35,29 @@ JalanKita adalah platform inovasi AI yang mengatasi kegagalan tata kelola birokr
 
 ---
 
+## 🆕 Yang Baru di v2.0
+
+Upgrade besar yang mempertahankan seluruh fungsi inti, ditambah kemampuan baru — **tanpa dependency tambahan** (semua memakai pustaka yang sudah dibundel Streamlit):
+
+| Area | Peningkatan |
+|---|---|
+| 📊 **Dashboard Analitik** | Halaman baru: KPI (penyelesaian, kepatuhan SLA, RAB outstanding) + grafik distribusi status, keparahan, prioritas, tipe kerusakan, dan RAB per provinsi. |
+| 🗺️ **Peta Sebaran** | Peta interaktif di Feed menampilkan titik laporan via koordinat GPS atau perkiraan pusat provinsi. |
+| 🚦 **Skor Prioritas Otomatis** | Skor 0–100 yang memadukan keparahan + tekanan SLA + dukungan publik, dengan label Kritis/Tinggi/Sedang/Rendah dan opsi urut "Prioritas". |
+| ⏱️ **SLA Dinamis** | Bug diperbaiki: hari berjalan kini dihitung otomatis dari timestamp (sebelumnya statis `0`). Target SLA mengikuti keparahan (Berat 3h · Sedang 7h · Ringan 14h). |
+| 🧠 **AI Lebih Tangguh** | Parsing JSON robust, retry otomatis, dan **mode demo offline** (estimasi heuristik) sehingga app tetap jalan tanpa API key. |
+| 📍 **Koordinat GPS** | Form laporan menerima koordinat dari Google Maps untuk pin peta yang presisi. |
+| ⬇️ **Ekspor CSV** | Unduh laporan (terfilter atau seluruhnya) untuk dinas/mitra CSR. |
+| 🗜️ **Kompresi Foto** | Foto otomatis di-resize (maks 1280px) & dikompres saat disimpan agar hemat storage. |
+| 🔐 **Keamanan** | Password admin dapat di-set via env `ADMIN_PASSWORD` (tidak lagi hardcoded). |
+| 🎨 **Desain Baru** | Sistem desain "asphalt + safety-amber on paper" (OKLCH, tema dipin via `.streamlit/config.toml` agar konsisten di light/dark OS), tipografi & kartu yang dikerjakan ulang. |
+| 👤 **Akun & Login** | Daftar/Masuk/Keluar, password ter-hash, akun demo otomatis (`budi`/`budi123`, `admin`/`admin123`), gate autentikasi di semua halaman. |
+| 🧑‍🤝‍🧑 **Mode Sosial** | Laporan kini "postingan" milik akun: avatar warna, **ikuti/unfollow**, **komentar**, dukungan, hitungan engagement, filter "yang saya ikuti". |
+| 🪪 **Profil Pribadi** | Halaman profil: header + statistik (laporan, dukungan, pengikut), tab Laporan Saya, lini masa Aktivitas, dan Pengaturan (edit nama/bio/avatar/password). |
+| 🔑 **Admin via Peran** | Penugasan & ubah status kini dibatasi ke akun ber-peran admin (menggantikan password admin lama). |
+
+---
+
 ## ✨ Fitur
 
 ### 📋 Halaman Laporan
@@ -55,6 +78,12 @@ JalanKita adalah platform inovasi AI yang mengatasi kegagalan tata kelola birokr
 - **Assignment System**: Tugaskan laporan ke instansi/tim dengan catatan resmi
 - **Progress Timeline**: Riwayat update kronologis dengan foto bukti pengerjaan
 - **Community Updates**: Siapapun bisa menambahkan update progress + foto bukti
+
+### 📊 Dashboard Analitik *(baru)*
+- **KPI Eksekutif**: Total laporan, tingkat penyelesaian, jumlah melewati SLA, kepatuhan SLA, total & outstanding RAB
+- **Visualisasi**: Grafik distribusi status, tingkat keparahan, prioritas, tipe kerusakan, dan estimasi RAB per provinsi
+- **Tabel Detail + Skor Prioritas**: Tabel interaktif dengan progress bar skor prioritas
+- **Ekspor CSV**: Unduh seluruh data laporan untuk pelaporan resmi
 
 ---
 
@@ -198,14 +227,18 @@ pages/feed.py (Streamlit)
 ```
 Jalan Kita/
 │
-├── app.py                  # Halaman utama: form laporan
+├── app.py                  # Halaman utama: form laporan + GPS + skor prioritas
 │
 ├── pages/
-│   └── feed.py             # Feed komunitas
+│   ├── feed.py             # Feed komunitas + peta + ekspor CSV
+│   └── dashboard.py        # Dashboard analitik (KPI + grafik) [baru]
 │
 ├── utils/
-│   ├── gemini.py           # Gemini API client (CV + RAB)
-│   └── storage.py          # JSON storage + file management
+│   ├── gemini.py           # AI client (CV + RAB): retry + mode demo offline
+│   ├── storage.py          # JSON storage, SLA dinamis, skor prioritas, CSV
+│   ├── analytics.py        # Agregasi data untuk dashboard [baru]
+│   ├── geo.py              # Koordinat provinsi untuk peta [baru]
+│   └── ui.py               # CSS, header, navigasi bersama [baru]
 │
 ├── data/
 │   ├── seed_data.json      # 5 laporan dummy untuk demo
@@ -277,26 +310,30 @@ cd "Jalan Kita"
 # 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Konfigurasi API key
+# 3. Konfigurasi API key (opsional — tanpa ini app jalan di MODE DEMO)
 # Edit file .env:
 GEMINI_API_KEY=your_api_key_here
+ADMIN_PASSWORD=password_admin_anda   # opsional
 
 # 4. Jalankan aplikasi
 streamlit run app.py
 ```
+
+> 💡 **Mode Demo:** tanpa `GEMINI_API_KEY`, aplikasi tetap berfungsi penuh menggunakan estimasi heuristik (ditandai label "Mode Demo"). Ideal untuk mencoba alur tanpa biaya API.
 
 ### Buka di Browser
 
 ```
 Halaman Laporan  →  http://localhost:8501
 Feed Komunitas   →  http://localhost:8501/feed
+Dashboard        →  http://localhost:8501/dashboard
 ```
 
 ### Admin Access
 
-Password default admin: `admin123`
+Password admin diambil dari env `ADMIN_PASSWORD`, default `admin123`.
 
-> ⚠️ Ganti password di `utils/storage.py` baris `ADMIN_PASSWORD` sebelum deployment
+> ⚠️ Set `ADMIN_PASSWORD` di `.env` sebelum deployment (jangan andalkan default).
 
 ---
 

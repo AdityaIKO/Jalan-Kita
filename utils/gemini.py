@@ -1,15 +1,41 @@
+"""AI layer: Gemini-backed road-damage CV + RAB estimation.
+
+Hardened over the original prototype with:
+  * robust JSON extraction (tolerates ```json fences and surrounding prose)
+  * automatic retries with backoff on transient failures
+  * a deterministic offline heuristic fallback so the app stays fully usable
+    for demos when GEMINI_API_KEY is missing or the API is unreachable. Results
+    produced offline are flagged with ``_demo: True`` so the UI can label them.
+"""
 import os
+import re
 import json
-from google import genai
-from google.genai import types
+import time
+import hashlib
+
 from PIL import Image
 from dotenv import load_dotenv
 import io
 
 load_dotenv()
 
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 MODEL = "gemini-2.5-flash"
+MAX_RETRIES = 3
+API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
+HAS_API = bool(API_KEY)
+
+# The genai client is created lazily so importing this module never fails when
+# the dependency or key is absent (offline/demo mode still works).
+_client = None
+
+
+def _get_client():
+    global _client
+    if _client is None:
+        from google import genai
+        _client = genai.Client(api_key=API_KEY)
+    return _client
+
 
 PROMPT_CV = """
 Kamu adalah sistem analisis kerusakan infrastruktur jalan berbasis computer vision.
@@ -60,36 +86,116 @@ Berikan hanya JSON, tanpa penjelasan tambahan.
 """
 
 
+# ── Helpers ───────────────────────────────────────────────────────────────────
 def pil_to_bytes(image: Image.Image) -> bytes:
     buf = io.BytesIO()
+    if image.mode in ("RGBA", "P", "LA"):
+        image = image.convert("RGB")
     image.save(buf, format="JPEG")
     return buf.getvalue()
 
 
-def analyze_image(image: Image.Image) -> dict:
+def _extract_json(text: str):
+    """Best-effort JSON extraction tolerant of fences and surrounding prose."""
+    if not text:
+        raise json.JSONDecodeError("empty", "", 0)
+    cleaned = text.strip().replace("```json", "").replace("```", "").strip()
     try:
-        image_bytes = pil_to_bytes(image)
-        response = client.models.generate_content(
-            model=MODEL,
-            contents=[
-                types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg"),
-                PROMPT_CV,
-            ],
-        )
-        raw = response.text.strip()
-        raw = raw.replace("```json", "").replace("```", "").strip()
-        result = json.loads(raw)
-        return {"success": True, "data": result}
+        return json.loads(cleaned)
     except json.JSONDecodeError:
-        return {
-            "success": False,
-            "error": "Gagal memparse respons AI. Coba lagi.",
-        }
+        pass
+    # Fall back to the first balanced {...} block.
+    match = re.search(r"\{.*\}", cleaned, re.DOTALL)
+    if match:
+        return json.loads(match.group(0))
+    raise json.JSONDecodeError("no json object found", cleaned, 0)
+
+
+def _call_with_retry(contents):
+    """Call Gemini with retries; returns parsed JSON dict or raises."""
+    last_err = None
+    for attempt in range(MAX_RETRIES):
+        try:
+            response = _get_client().models.generate_content(
+                model=MODEL, contents=contents
+            )
+            return _extract_json(response.text)
+        except Exception as e:  # transient network / parse / quota
+            last_err = e
+            time.sleep(0.6 * (attempt + 1))
+    raise last_err if last_err else RuntimeError("unknown error")
+
+
+# ── Offline heuristic fallback ────────────────────────────────────────────────
+_DEMO_TYPES = [
+    ("Lubang (Pothole)", "Berat", "1.1m x 0.7m x 0.14m", "Lubang dalam berpotensi merusak kendaraan dan membahayakan pengendara motor."),
+    ("Retak Buaya (Alligator Crack)", "Sedang", "2.0m x 1.5m", "Retak buaya menandakan kelelahan struktur perkerasan, perlu penanganan sebelum meluas."),
+    ("Retak Memanjang (Longitudinal Crack)", "Ringan", "3.2m x 0.02m", "Retak memanjang ringan, dapat ditangani dengan sealant untuk mencegah air masuk."),
+    ("Ambles (Settlement)", "Berat", "2.5m x 2.0m x 0.10m", "Permukaan ambles cukup luas, berisiko menyebabkan genangan dan kecelakaan."),
+]
+
+
+def _demo_analysis(image: Image.Image) -> dict:
+    """Deterministic plausible CV result derived from image bytes (no model)."""
+    digest = hashlib.md5(pil_to_bytes(image)).hexdigest()
+    tipe, kep, dim, catatan = _DEMO_TYPES[int(digest[:2], 16) % len(_DEMO_TYPES)]
+    conf = 78 + int(digest[2:4], 16) % 18  # 78–95%
+    return {
+        "tipe_kerusakan": tipe,
+        "tingkat_keparahan": kep,
+        "estimasi_dimensi": dim,
+        "confidence": f"{conf}%",
+        "catatan": catatan,
+        "_demo": True,
+    }
+
+
+def _demo_rab(deteksi: dict, lokasi: str) -> dict:
+    """Coherent heuristic RAB based on severity (no model)."""
+    kep = deteksi.get("tingkat_keparahan", "Sedang")
+    base = {"Berat": 2_200_000, "Sedang": 1_150_000, "Ringan": 480_000}.get(kep, 1_150_000)
+    material = int(base * 0.55)
+    tenaga = int(base * 0.28)
+    alat = base - material - tenaga
+    breakdown = [
+        {"item": "Aspal hotmix (AC-BC)", "volume": "0.14 m³", "harga_satuan": 850_000, "subtotal": int(material * 0.8)},
+        {"item": "Agregat base course", "volume": "0.10 m³", "harga_satuan": 600_000, "subtotal": int(material * 0.2)},
+        {"item": "Tenaga kerja (mandor + pekerja)", "volume": "3 OH", "harga_satuan": int(tenaga / 3), "subtotal": tenaga},
+        {"item": "Sewa alat (stamper/compactor)", "volume": "1 hari", "harga_satuan": alat, "subtotal": alat},
+    ]
+    return {
+        "material": material,
+        "tenaga_kerja": tenaga,
+        "peralatan": alat,
+        "total": base,
+        "breakdown": breakdown,
+        "_demo": True,
+    }
+
+
+# ── Public API ────────────────────────────────────────────────────────────────
+def analyze_image(image: Image.Image) -> dict:
+    if not HAS_API:
+        return {"success": True, "data": _demo_analysis(image), "demo": True}
+    try:
+        from google.genai import types
+        result = _call_with_retry([
+            types.Part.from_bytes(data=pil_to_bytes(image), mime_type="image/jpeg"),
+            PROMPT_CV,
+        ])
+        result["_demo"] = False
+        return {"success": True, "data": result, "demo": False}
+    except json.JSONDecodeError:
+        return {"success": False, "error": "Gagal memparse respons AI. Coba lagi."}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        # Graceful degradation: keep the demo usable even if the API fails.
+        return {"success": True, "data": _demo_analysis(image), "demo": True,
+                "warning": f"API tidak tersedia ({e}); menggunakan estimasi heuristik."}
 
 
 def generate_rab(deteksi: dict, lokasi: str) -> dict:
+    if not HAS_API:
+        return {"success": True, "data": _demo_rab(deteksi, lokasi), "demo": True}
     prompt = PROMPT_RAB.format(
         tipe_kerusakan=deteksi.get("tipe_kerusakan", "-"),
         tingkat_keparahan=deteksi.get("tingkat_keparahan", "-"),
@@ -97,18 +203,11 @@ def generate_rab(deteksi: dict, lokasi: str) -> dict:
         lokasi=lokasi,
     )
     try:
-        response = client.models.generate_content(
-            model=MODEL,
-            contents=prompt,
-        )
-        raw = response.text.strip()
-        raw = raw.replace("```json", "").replace("```", "").strip()
-        result = json.loads(raw)
-        return {"success": True, "data": result}
+        result = _call_with_retry(prompt)
+        result["_demo"] = False
+        return {"success": True, "data": result, "demo": False}
     except json.JSONDecodeError:
-        return {
-            "success": False,
-            "error": "Gagal memparse respons RAB. Coba lagi.",
-        }
+        return {"success": False, "error": "Gagal memparse respons RAB. Coba lagi."}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return {"success": True, "data": _demo_rab(deteksi, lokasi), "demo": True,
+                "warning": f"API tidak tersedia ({e}); menggunakan estimasi heuristik."}

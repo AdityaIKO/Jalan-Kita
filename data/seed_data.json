@@ -3,7 +3,7 @@
     "id": "RPT-001",
     "pelapor": "Budi Santoso",
     "lokasi": "Jl. Kaliurang KM 12, Sleman, DIY",
-    "timestamp": "2025-05-15T08:23:00",
+    "timestamp": "2026-06-15T15:31:33",
     "foto_filename": null,
     "deteksi": {
       "tipe_kerusakan": "Lubang (Pothole)",
@@ -18,24 +18,54 @@
       "peralatan": 350000,
       "total": 2200000,
       "breakdown": [
-        {"item": "Aspal hotmix (AC-BC)", "volume": "0.14 m³", "harga_satuan": 850000, "subtotal": 1190000},
-        {"item": "Agregat base course", "volume": "0.10 m³", "harga_satuan": 600000, "subtotal": 60000},
-        {"item": "Tack coat (aspal cair)", "volume": "0.5 liter", "harga_satuan": 15000, "subtotal": 7500},
-        {"item": "Mandor (1 org, 1 hari)", "volume": "1 OH", "harga_satuan": 200000, "subtotal": 200000},
-        {"item": "Pekerja (2 org, 1 hari)", "volume": "2 OH", "harga_satuan": 150000, "subtotal": 300000},
-        {"item": "Sewa compactor plate", "volume": "1 hari", "harga_satuan": 350000, "subtotal": 350000}
+        {
+          "item": "Aspal hotmix (AC-BC)",
+          "volume": "0.14 m³",
+          "harga_satuan": 850000,
+          "subtotal": 1190000
+        },
+        {
+          "item": "Agregat base course",
+          "volume": "0.10 m³",
+          "harga_satuan": 600000,
+          "subtotal": 60000
+        },
+        {
+          "item": "Tack coat (aspal cair)",
+          "volume": "0.5 liter",
+          "harga_satuan": 15000,
+          "subtotal": 7500
+        },
+        {
+          "item": "Mandor (1 org, 1 hari)",
+          "volume": "1 OH",
+          "harga_satuan": 200000,
+          "subtotal": 200000
+        },
+        {
+          "item": "Pekerja (2 org, 1 hari)",
+          "volume": "2 OH",
+          "harga_satuan": 150000,
+          "subtotal": 300000
+        },
+        {
+          "item": "Sewa compactor plate",
+          "volume": "1 hari",
+          "harga_satuan": 350000,
+          "subtotal": 350000
+        }
       ]
     },
     "status": "Prioritas Publik",
     "likes": 134,
-    "sla_hari": 7,
-    "hari_berjalan": 7
+    "lat": -7.756,
+    "lon": 110.409
   },
   {
     "id": "RPT-002",
     "pelapor": "Dewi Rahayu",
     "lokasi": "Jl. Parangtritis KM 5, Bantul, DIY",
-    "timestamp": "2025-05-17T14:05:00",
+    "timestamp": "2026-06-16T15:31:33",
     "foto_filename": null,
     "deteksi": {
       "tipe_kerusakan": "Retak Buaya (Alligator Crack)",
@@ -50,25 +80,60 @@
       "peralatan": 500000,
       "total": 4500000,
       "breakdown": [
-        {"item": "Aspal hotmix overlay (AC-WC)", "volume": "0.7 m³", "harga_satuan": 950000, "subtotal": 665000},
-        {"item": "Prime coat", "volume": "2 liter", "harga_satuan": 18000, "subtotal": 36000},
-        {"item": "Material crack filler", "volume": "5 kg", "harga_satuan": 45000, "subtotal": 225000},
-        {"item": "Mandor (1 org, 1 hari)", "volume": "1 OH", "harga_satuan": 200000, "subtotal": 200000},
-        {"item": "Pekerja (3 org, 1.5 hari)", "volume": "4.5 OH", "harga_satuan": 150000, "subtotal": 675000},
-        {"item": "Sewa asphalt finisher", "volume": "0.5 hari", "harga_satuan": 800000, "subtotal": 400000},
-        {"item": "Sewa tandem roller", "volume": "0.5 hari", "harga_satuan": 600000, "subtotal": 300000}
+        {
+          "item": "Aspal hotmix overlay (AC-WC)",
+          "volume": "0.7 m³",
+          "harga_satuan": 950000,
+          "subtotal": 665000
+        },
+        {
+          "item": "Prime coat",
+          "volume": "2 liter",
+          "harga_satuan": 18000,
+          "subtotal": 36000
+        },
+        {
+          "item": "Material crack filler",
+          "volume": "5 kg",
+          "harga_satuan": 45000,
+          "subtotal": 225000
+        },
+        {
+          "item": "Mandor (1 org, 1 hari)",
+          "volume": "1 OH",
+          "harga_satuan": 200000,
+          "subtotal": 200000
+        },
+        {
+          "item": "Pekerja (3 org, 1.5 hari)",
+          "volume": "4.5 OH",
+          "harga_satuan": 150000,
+          "subtotal": 675000
+        },
+        {
+          "item": "Sewa asphalt finisher",
+          "volume": "0.5 hari",
+          "harga_satuan": 800000,
+          "subtotal": 400000
+        },
+        {
+          "item": "Sewa tandem roller",
+          "volume": "0.5 hari",
+          "harga_satuan": 600000,
+          "subtotal": 300000
+        }
       ]
     },
     "status": "Menunggu",
     "likes": 47,
-    "sla_hari": 7,
-    "hari_berjalan": 3
+    "lat": null,
+    "lon": null
   },
   {
     "id": "RPT-003",
     "pelapor": "Ahmad Fauzi",
     "lokasi": "Jl. Wonosari KM 8, Gunungkidul, DIY",
-    "timestamp": "2025-05-10T09:45:00",
+    "timestamp": "2026-06-10T15:31:33",
     "foto_filename": null,
     "deteksi": {
       "tipe_kerusakan": "Lubang (Pothole)",
@@ -83,23 +148,48 @@
       "peralatan": 320000,
       "total": 1800000,
       "breakdown": [
-        {"item": "Aspal hotmix (AC-BC)", "volume": "0.10 m³", "harga_satuan": 850000, "subtotal": 850000},
-        {"item": "Agregat base course", "volume": "0.05 m³", "harga_satuan": 600000, "subtotal": 30000},
-        {"item": "Mandor (1 org, 1 hari)", "volume": "1 OH", "harga_satuan": 200000, "subtotal": 200000},
-        {"item": "Pekerja (2 org, 1 hari)", "volume": "2 OH", "harga_satuan": 150000, "subtotal": 300000},
-        {"item": "Sewa compactor plate", "volume": "1 hari", "harga_satuan": 320000, "subtotal": 320000}
+        {
+          "item": "Aspal hotmix (AC-BC)",
+          "volume": "0.10 m³",
+          "harga_satuan": 850000,
+          "subtotal": 850000
+        },
+        {
+          "item": "Agregat base course",
+          "volume": "0.05 m³",
+          "harga_satuan": 600000,
+          "subtotal": 30000
+        },
+        {
+          "item": "Mandor (1 org, 1 hari)",
+          "volume": "1 OH",
+          "harga_satuan": 200000,
+          "subtotal": 200000
+        },
+        {
+          "item": "Pekerja (2 org, 1 hari)",
+          "volume": "2 OH",
+          "harga_satuan": 150000,
+          "subtotal": 300000
+        },
+        {
+          "item": "Sewa compactor plate",
+          "volume": "1 hari",
+          "harga_satuan": 320000,
+          "subtotal": 320000
+        }
       ]
     },
     "status": "CSR Dashboard",
     "likes": 89,
-    "sla_hari": 30,
-    "hari_berjalan": 30
+    "lat": null,
+    "lon": null
   },
   {
     "id": "RPT-004",
     "pelapor": "Siti Nurhaliza",
     "lokasi": "Jl. Godean KM 3, Sleman, DIY",
-    "timestamp": "2025-05-19T11:20:00",
+    "timestamp": "2026-06-12T15:31:33",
     "foto_filename": null,
     "deteksi": {
       "tipe_kerusakan": "Retak Memanjang (Longitudinal Crack)",
@@ -114,21 +204,36 @@
       "peralatan": 150000,
       "total": 900000,
       "breakdown": [
-        {"item": "Material crack sealant", "volume": "10 kg", "harga_satuan": 35000, "subtotal": 350000},
-        {"item": "Pekerja (2 org, 1 hari)", "volume": "2 OH", "harga_satuan": 150000, "subtotal": 300000},
-        {"item": "Sewa crack router", "volume": "1 hari", "harga_satuan": 150000, "subtotal": 150000}
+        {
+          "item": "Material crack sealant",
+          "volume": "10 kg",
+          "harga_satuan": 35000,
+          "subtotal": 350000
+        },
+        {
+          "item": "Pekerja (2 org, 1 hari)",
+          "volume": "2 OH",
+          "harga_satuan": 150000,
+          "subtotal": 300000
+        },
+        {
+          "item": "Sewa crack router",
+          "volume": "1 hari",
+          "harga_satuan": 150000,
+          "subtotal": 150000
+        }
       ]
     },
     "status": "Selesai",
     "likes": 23,
-    "sla_hari": 7,
-    "hari_berjalan": 5
+    "lat": null,
+    "lon": null
   },
   {
     "id": "RPT-005",
     "pelapor": "Rizki Pratama",
     "lokasi": "Jl. Solo KM 15, Klaten, Jawa Tengah",
-    "timestamp": "2025-05-20T16:33:00",
+    "timestamp": "2026-06-19T15:31:33",
     "foto_filename": null,
     "deteksi": {
       "tipe_kerusakan": "Ambles (Settlement)",
@@ -143,16 +248,41 @@
       "peralatan": 700000,
       "total": 4600000,
       "breakdown": [
-        {"item": "Aspal hotmix (AC-BC)", "volume": "0.30 m³", "harga_satuan": 850000, "subtotal": 2550000},
-        {"item": "Material stabilisasi tanah", "volume": "50 kg", "harga_satuan": 5000, "subtotal": 250000},
-        {"item": "Mandor (1 org, 2 hari)", "volume": "2 OH", "harga_satuan": 200000, "subtotal": 400000},
-        {"item": "Pekerja (3 org, 2 hari)", "volume": "6 OH", "harga_satuan": 150000, "subtotal": 900000},
-        {"item": "Sewa excavator mini", "volume": "1 hari", "harga_satuan": 700000, "subtotal": 700000}
+        {
+          "item": "Aspal hotmix (AC-BC)",
+          "volume": "0.30 m³",
+          "harga_satuan": 850000,
+          "subtotal": 2550000
+        },
+        {
+          "item": "Material stabilisasi tanah",
+          "volume": "50 kg",
+          "harga_satuan": 5000,
+          "subtotal": 250000
+        },
+        {
+          "item": "Mandor (1 org, 2 hari)",
+          "volume": "2 OH",
+          "harga_satuan": 200000,
+          "subtotal": 400000
+        },
+        {
+          "item": "Pekerja (3 org, 2 hari)",
+          "volume": "6 OH",
+          "harga_satuan": 150000,
+          "subtotal": 900000
+        },
+        {
+          "item": "Sewa excavator mini",
+          "volume": "1 hari",
+          "harga_satuan": 700000,
+          "subtotal": 700000
+        }
       ]
     },
     "status": "Menunggu",
     "likes": 12,
-    "sla_hari": 7,
-    "hari_berjalan": 1
+    "lat": -7.8014,
+    "lon": 110.3647
   }
 ]
