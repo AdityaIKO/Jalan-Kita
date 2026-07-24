@@ -1,5 +1,7 @@
-streamlit>=1.35.0
+# Tested against Streamlit 1.57. pandas & altair ship with Streamlit and power
+# the dashboard charts and map, so they need no separate entry. All security and
+# sustainability logic uses the standard library + Pillow only (no new deps).
+streamlit>=1.40,<2
 google-genai>=0.3.0
 Pillow>=10.0.0
 python-dotenv>=1.0.0
-# Note: pandas & altair are bundled with Streamlit (used by the dashboard/map).

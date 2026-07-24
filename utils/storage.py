@@ -88,12 +88,18 @@ def _migrate(report: dict) -> dict:
     return report
 
 
+# Length caps keep stored records bounded and limit abuse. Rendering is escaped
+# at the UI layer (see utils.security.esc); these are storage-side guards.
+MAX_COMMENT_LEN = 500
+MAX_PROGRESS_LEN = 800
+
+
 def add_comment(report_id: str, username: str, nama: str, text: str) -> list:
     reports = load_reports()
     comment = {
         "username": username,
-        "nama": nama,
-        "text": text.strip(),
+        "nama": (nama or "")[:80],
+        "text": text.strip()[:MAX_COMMENT_LEN],
         "timestamp": datetime.now().isoformat(),
     }
     for r in reports:
@@ -180,8 +186,8 @@ def add_progress_update(report_id: str, uploader: str, deskripsi: str, foto_byte
 
     update = {
         "timestamp": datetime.now().isoformat(),
-        "uploader": uploader,
-        "deskripsi": deskripsi,
+        "uploader": (uploader or "")[:80],
+        "deskripsi": (deskripsi or "").strip()[:MAX_PROGRESS_LEN],
         "foto_path": foto_path,
     }
 

@@ -1,5 +1,6 @@
 # Environment & secrets
 .env
+.streamlit/secrets.toml
 
 # Generated data (user reports, accounts & uploaded photos)
 data/reports.json

@@ -37,15 +37,15 @@ JalanKita adalah platform inovasi AI yang mengatasi kegagalan tata kelola birokr
 
 ## 🆕 Yang Baru di v2.0
 
-Upgrade besar yang mempertahankan seluruh fungsi inti, ditambah kemampuan baru — **tanpa dependency tambahan** (semua memakai pustaka yang sudah dibundel Streamlit):
+Upgrade besar yang mempertahankan seluruh fungsi inti, ditambah kemampuan baru, **tanpa dependency tambahan** (semua memakai pustaka yang sudah dibundel Streamlit):
 
 | Area | Peningkatan |
 |---|---|
 | 📊 **Dashboard Analitik** | Halaman baru: KPI (penyelesaian, kepatuhan SLA, RAB outstanding) + grafik distribusi status, keparahan, prioritas, tipe kerusakan, dan RAB per provinsi. |
 | 🗺️ **Peta Sebaran** | Peta interaktif di Feed menampilkan titik laporan via koordinat GPS atau perkiraan pusat provinsi. |
-| 🚦 **Skor Prioritas Otomatis** | Skor 0–100 yang memadukan keparahan + tekanan SLA + dukungan publik, dengan label Kritis/Tinggi/Sedang/Rendah dan opsi urut "Prioritas". |
+| 🚦 **Skor Prioritas Otomatis** | Skor 0 sampai 100 yang memadukan keparahan + tekanan SLA + dukungan publik, dengan label Kritis/Tinggi/Sedang/Rendah dan opsi urut "Prioritas". |
 | ⏱️ **SLA Dinamis** | Bug diperbaiki: hari berjalan kini dihitung otomatis dari timestamp (sebelumnya statis `0`). Target SLA mengikuti keparahan (Berat 3h · Sedang 7h · Ringan 14h). |
-| 🧠 **AI Lebih Tangguh** | Parsing JSON robust, retry otomatis, dan **mode demo offline** (estimasi heuristik) sehingga app tetap jalan tanpa API key. |
+| 🧠 **AI Lebih Tangguh** | Parsing JSON tahan-banting, retry otomatis, dan **mode demo offline** (estimasi heuristik) sehingga app tetap jalan tanpa API key. |
 | 📍 **Koordinat GPS** | Form laporan menerima koordinat dari Google Maps untuk pin peta yang presisi. |
 | ⬇️ **Ekspor CSV** | Unduh laporan (terfilter atau seluruhnya) untuk dinas/mitra CSR. |
 | 🗜️ **Kompresi Foto** | Foto otomatis di-resize (maks 1280px) & dikompres saat disimpan agar hemat storage. |
@@ -55,6 +55,52 @@ Upgrade besar yang mempertahankan seluruh fungsi inti, ditambah kemampuan baru �
 | 🧑‍🤝‍🧑 **Mode Sosial** | Laporan kini "postingan" milik akun: avatar warna, **ikuti/unfollow**, **komentar**, dukungan, hitungan engagement, filter "yang saya ikuti". |
 | 🪪 **Profil Pribadi** | Halaman profil: header + statistik (laporan, dukungan, pengikut), tab Laporan Saya, lini masa Aktivitas, dan Pengaturan (edit nama/bio/avatar/password). |
 | 🔑 **Admin via Peran** | Penugasan & ubah status kini dibatasi ke akun ber-peran admin (menggantikan password admin lama). |
+
+---
+
+## 🌱 v3.0 · AI for Sustainable Future (BRIN AIDeaNation 2026)
+
+Rilis ini menambahkan lapisan keberlanjutan, pengerasan keamanan, dan kesiapan
+deployment tanpa menambah satu pun dependency baru (semua memakai pustaka standar
+Python + Pillow).
+
+### Lapisan Kecerdasan Keberlanjutan (`utils/sustainability.py`)
+
+Menerjemahkan setiap kerusakan jalan yang dideteksi AI menjadi dampak iklim yang
+dapat dipahami audiens non-teknis dalam hitungan detik:
+
+| Kapabilitas | Penjelasan |
+|---|---|
+| 🔥 **Biaya Lingkungan** | Estimasi CO₂ dan bahan bakar yang terbuang setiap hari selama jalan dibiarkan rusak (siklus rem, perlambat, akselerasi ulang, dan pengalihan rute), lengkap dengan setara serapan pohon dan kerugian biaya BBM per tahun. |
+| ♻️ **Rekomendasi Material** | Untuk tiap tipe kerusakan, sistem menyarankan metode perbaikan rendah karbon (aspal campur limbah plastik, cold in-place recycling, RAP, micro-surfacing) beserta persentase emisi yang dihindari versus aspal panas konvensional. |
+| 🎯 **Pemetaan SDG** | Setiap laporan dikaitkan ke Tujuan Pembangunan Berkelanjutan yang didukung (SDG 3, 9, 11, 12, 13), lalu diagregasi di Dashboard untuk pelaporan ke pemerintah dan pendana. |
+
+Seluruh angka adalah estimasi teknis dari faktor emisi publik dengan asumsi yang
+ditampilkan transparan di UI (jumlah lalu lintas, faktor emisi CO₂/liter, serapan
+pohon), bukan angka kotak hitam.
+
+### Pengerasan Keamanan (`utils/security.py`)
+
+| Kontrol | Implementasi |
+|---|---|
+| 🛡️ **Anti stored-XSS** | Seluruh teks buatan pengguna (nama, bio, lokasi, komentar, penugasan) di-escape sebelum dirender ke HTML, menutup celah injeksi skrip lewat komentar/bio. |
+| 🔑 **Hashing kata sandi** | PBKDF2-HMAC-SHA256 (240k iterasi) menggantikan SHA-256 lama; hash lama tetap valid dan otomatis diupgrade saat login berikutnya. |
+| ⛔ **Pembatasan login** | Maksimal 5 percobaan gagal per username sebelum penguncian sementara, ditegakkan lintas sesi di level proses server. |
+| 🖼️ **Validasi unggahan** | Foto diperiksa ukuran (maks 8 MB), magic bytes, dan integritas dekode Pillow; ekstensi file tidak dipercaya begitu saja. |
+| ⏲️ **Sesi kedaluwarsa** | Sesi menganggur otomatis berakhir setelah 8 jam. |
+| 🔒 **Konfigurasi server** | XSRF aktif, CORS tertutup, batas unggah selaras validator, statistik penggunaan dimatikan (`.streamlit/config.toml`). |
+
+### Desain Responsif Penuh
+
+Tipografi dan tata letak kini menyesuaikan otomatis ke semua ukuran layar memakai
+`clamp()` fluida dan breakpoint mobile: kolom menumpuk, kartu dan metrik membungkus
+rapi, navigasi mengalir di layar sempit. Diuji dari 375px (ponsel) hingga desktop.
+
+### Kesiapan Deployment
+
+- `requirements.txt` teruji pada Streamlit 1.57, tanpa dependency tambahan.
+- `.env.example` dan `.streamlit/secrets.toml.example` sebagai templat rahasia (yang asli di-gitignore).
+- Siap deploy ke Streamlit Community Cloud atau kontainer mana pun; mode demo membuat app tetap jalan tanpa API key.
 
 ---
 
@@ -236,9 +282,12 @@ Jalan Kita/
 ├── utils/
 │   ├── gemini.py           # AI client (CV + RAB): retry + mode demo offline
 │   ├── storage.py          # JSON storage, SLA dinamis, skor prioritas, CSV
-│   ├── analytics.py        # Agregasi data untuk dashboard [baru]
-│   ├── geo.py              # Koordinat provinsi untuk peta [baru]
-│   └── ui.py               # CSS, header, navigasi bersama [baru]
+│   ├── analytics.py        # Agregasi data untuk dashboard
+│   ├── geo.py              # Koordinat provinsi untuk peta
+│   ├── ui.py               # CSS responsif, header, navigasi, komponen keberlanjutan
+│   ├── auth.py             # Akun, PBKDF2, rate-limit login, sesi
+│   ├── security.py         # Escape XSS, hashing, validasi unggahan [v3.0]
+│   └── sustainability.py   # CO₂/BBM terbuang, material hijau, SDG [v3.0]
 │
 ├── data/
 │   ├── seed_data.json      # 5 laporan dummy untuk demo
@@ -310,7 +359,7 @@ cd "Jalan Kita"
 # 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Konfigurasi API key (opsional — tanpa ini app jalan di MODE DEMO)
+# 3. Konfigurasi API key (opsional; tanpa ini app jalan di MODE DEMO)
 # Edit file .env:
 GEMINI_API_KEY=your_api_key_here
 ADMIN_PASSWORD=password_admin_anda   # opsional
@@ -331,9 +380,23 @@ Dashboard        →  http://localhost:8501/dashboard
 
 ### Admin Access
 
-Password admin diambil dari env `ADMIN_PASSWORD`, default `admin123`.
+Peran admin menggunakan akun ber-role admin (demo: `admin` / `admin123`). Untuk
+deployment, ubah kata sandi akun admin lewat halaman Pengaturan setelah login.
 
-> ⚠️ Set `ADMIN_PASSWORD` di `.env` sebelum deployment (jangan andalkan default).
+### Deploy ke Streamlit Community Cloud
+
+1. Push repo ke GitHub (rahasia tidak ikut: `.env` dan `.streamlit/secrets.toml` sudah di-gitignore).
+2. Buat app baru di [share.streamlit.io](https://share.streamlit.io), arahkan ke `app.py`.
+3. Di menu **Secrets**, tempel isi mengikuti `.streamlit/secrets.toml.example`:
+   ```toml
+   GEMINI_API_KEY = "kunci_anda"
+   ADMIN_PASSWORD = "kata_sandi_admin"
+   ```
+4. Deploy. Tanpa `GEMINI_API_KEY`, app tetap jalan dalam mode demo.
+
+> Catatan: penyimpanan berbasis file (`data/`, `uploads/`) bersifat sementara di
+> Streamlit Cloud. Untuk data yang persisten di produksi, hubungkan basis data
+> eksternal (mis. Postgres/Supabase) sebagai langkah lanjutan.
 
 ---
 
@@ -350,7 +413,7 @@ python-dotenv>=1.0.0
 
 ## 🔮 Roadmap
 
-### v1.0 (Prototipe — sekarang)
+### v1.0 (Prototipe, sekarang)
 - [x] CV Detection dengan Gemini Vision
 - [x] RAB Generation dengan LLM
 - [x] Feed komunitas dengan persistent storage
@@ -358,7 +421,7 @@ python-dotenv>=1.0.0
 - [x] Admin panel + assignment system
 - [x] Progress timeline + foto bukti
 
-### v2.0 (MVP — planned)
+### v2.0 (MVP, planned)
 - [ ] Live Photo Capturing (tolak galeri)
 - [ ] Auto-blur wajah & plat nomor
 - [ ] GPS + Reverse Geocoding otomatis
@@ -366,7 +429,7 @@ python-dotenv>=1.0.0
 - [ ] CSR Dashboard untuk pendanaan swasta
 - [ ] Spatial clustering (cek duplikasi dalam radius 10m)
 
-### v3.0 (Production — planned)
+### v3.0 (Production, planned)
 - [ ] Autentikasi pengguna (NIK-based)
 - [ ] Predictive maintenance (ML regresi)
 - [ ] Mobile app (Flutter)
@@ -386,7 +449,7 @@ Universitas Gadjah Mada
 
 ## 📄 Lisensi
 
-MIT License — bebas digunakan untuk keperluan pendidikan dan penelitian.
+MIT License. Bebas digunakan untuk keperluan pendidikan dan penelitian.
 
 ---
 

@@ -67,10 +67,19 @@ GLOBAL_CSS = """
   html, body, [class*="css"], .stApp, button, input, textarea, select {
     font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   }
+  /* Fluid base font: scales smoothly between phone and desktop so type,
+     spacing (rem-based), and layout adapt to any screen without fixed sizes. */
+  html { font-size: clamp(14px, 0.6vw + 12.4px, 17px); }
   .stApp { background: var(--paper); }
   /* Top padding must clear Streamlit's fixed header bar, or the first element
-     (nav row on pages without a masthead) gets clipped at the top. */
-  .block-container { padding-top: 4.5rem; padding-left: 3rem; padding-right: 3rem; max-width: 1500px; }
+     (nav row on pages without a masthead) gets clipped at the top. Side padding
+     is fluid so content breathes on desktop and reclaims space on mobile. */
+  .block-container {
+    padding-top: 4.5rem;
+    padding-left: clamp(0.9rem, 3vw, 3rem);
+    padding-right: clamp(0.9rem, 3vw, 3rem);
+    max-width: 1500px;
+  }
   header[data-testid="stHeader"] { background: transparent; }
 
   /* Hide Streamlit's auto multipage sidebar — we use the top nav instead */
@@ -99,8 +108,8 @@ GLOBAL_CSS = """
     font-size: 0.7rem; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase;
     color: oklch(0.72 0.09 62); margin-bottom: 0.55rem;
   }
-  .masthead h1, .masthead h1 * { color: oklch(0.97 0.01 85); font-size: 1.95rem; font-weight: 800; margin: 0; line-height: 1.05; }
-  .masthead p, .masthead p * { color: oklch(0.80 0.012 80); margin: 0.5rem 0 0; font-size: 0.95rem; max-width: 68ch; }
+  .masthead h1, .masthead h1 * { color: oklch(0.97 0.01 85); font-size: clamp(1.5rem, 3.4vw, 1.95rem); font-weight: 800; margin: 0; line-height: 1.08; }
+  .masthead p, .masthead p * { color: oklch(0.80 0.012 80); margin: 0.5rem 0 0; font-size: clamp(0.85rem, 1.6vw, 0.95rem); max-width: 68ch; }
   .masthead .eyebrow, .masthead .eyebrow * { color: oklch(0.72 0.09 62); }
 
   /* ── Navigation (st.page_link row) ────────────────────────────────────── */
@@ -261,21 +270,131 @@ GLOBAL_CSS = """
   .timeline-item .tx { font-size:0.86rem; color:var(--ink); }
   .timeline-item .tx .mut { color:var(--ink-faint); font-size:0.74rem; font-weight:600; }
 
-  @media (max-width: 720px) {
+  /* ── Sustainability layer (CO2 impact, eco-material, SDG) ──────────────── */
+  .eco-strip { display:flex; flex-wrap:wrap; gap:0.6rem; margin-top:0.85rem; }
+  .eco-metric { flex:1 1 120px; background:oklch(0.96 0.03 152); border:1px solid oklch(0.86 0.05 152); border-radius:12px; padding:0.7rem 0.85rem; }
+  .eco-metric .lbl { font-size:0.62rem; text-transform:uppercase; letter-spacing:0.08em; font-weight:700; color:oklch(0.42 0.10 152); }
+  .eco-metric .num { font-size:1.15rem; font-weight:800; color:oklch(0.36 0.11 152); line-height:1.1; margin-top:0.15rem; font-variant-numeric:tabular-nums; }
+  .eco-metric .sub { font-size:0.66rem; color:oklch(0.48 0.06 152); margin-top:0.1rem; }
+  .eco-metric.warn { background:oklch(0.96 0.03 40); border-color:oklch(0.86 0.06 40); }
+  .eco-metric.warn .lbl { color:oklch(0.48 0.14 40); }
+  .eco-metric.warn .num { color:oklch(0.44 0.16 40); }
+  .eco-metric.warn .sub { color:oklch(0.52 0.10 40); }
+
+  .eco-card { background:oklch(0.97 0.02 152); border:1px solid oklch(0.87 0.05 152); border-left:3px solid var(--ok); border-radius:12px; padding:0.9rem 1.1rem; margin-top:0.7rem; }
+  .eco-card .tag { font-size:0.62rem; text-transform:uppercase; letter-spacing:0.1em; font-weight:800; color:oklch(0.42 0.10 152); }
+  .eco-card .name { font-weight:800; color:var(--ink); font-size:0.96rem; margin-top:0.2rem; }
+  .eco-card .desc { font-size:0.82rem; color:var(--ink-soft); margin-top:0.25rem; line-height:1.45; }
+  .eco-card .save { display:inline-block; margin-top:0.5rem; background:var(--ok); color:#fff; font-weight:800; font-size:0.72rem; border-radius:999px; padding:0.2rem 0.7rem; }
+
+  .sdg-row { display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.7rem; }
+  .sdg-badge { display:inline-flex; align-items:center; gap:0.35rem; border-radius:8px; padding:0.24rem 0.6rem; font-size:0.7rem; font-weight:800; color:#fff; }
+  .sdg-badge .n { background:rgba(255,255,255,0.28); border-radius:5px; padding:0 0.32rem; font-variant-numeric:tabular-nums; }
+  .sdg-tile { border-radius:12px; padding:0.9rem 1rem; color:#fff; }
+  .sdg-tile .n { font-size:1.5rem; font-weight:800; line-height:1; }
+  .sdg-tile .g { font-size:0.7rem; opacity:0.92; margin-top:0.25rem; font-weight:700; }
+  .sdg-tile .c { font-size:0.68rem; opacity:0.85; margin-top:0.15rem; }
+
+  /* ── Responsive: stack Streamlit columns and tighten chrome on small screens ── */
+  @media (max-width: 900px) {
+    .masthead { padding: 1.5rem 1.4rem 1.4rem; border-radius: 14px; }
     .deteksi-row { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 640px) {
+    .block-container { padding-top: 3.6rem; }
+    /* Let column rows wrap; each column takes a sensible share instead of
+       being crushed. Content columns go full width, nav wraps into rows. */
+    [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; gap: 0.5rem !important; }
+    [data-testid="stHorizontalBlock"] > [data-testid="column"] {
+      flex: 1 1 45% !important; min-width: 45% !important;
+    }
     .pstats { gap:1.1rem; flex-wrap:wrap; }
+    .rab-total .amount { font-size: 1.4rem; }
+    .engage { flex-wrap: wrap; gap: 0.6rem 1rem; }
+    .eco-metric { flex-basis: 45%; }
+  }
+  @media (max-width: 460px) {
+    .deteksi-row { grid-template-columns: 1fr 1fr; gap: 0.4rem 0.8rem; padding: 0.7rem 0.85rem; }
+    [data-testid="stHorizontalBlock"] > [data-testid="column"] {
+      flex: 1 1 100% !important; min-width: 100% !important;
+    }
+    .masthead h1, .masthead h1 * { font-size: 1.35rem; }
   }
 </style>
 """
 
 
 def avatar_html(name: str, color: str = "#B5701A", size: int = 34) -> str:
-    """Return an inline avatar bubble with the name's initial."""
-    initial = (name.strip()[0].upper() if name and name.strip() else "?")
+    """Return an inline avatar bubble with the name's initial (escaped)."""
+    from utils.security import esc
+    raw = (name.strip()[0].upper() if name and name.strip() else "?")
+    initial = esc(raw)
+    safe_color = color if _is_safe_color(color) else "#B5701A"
     fs = round(size * 0.42)
     return (
         f'<span class="avatar" style="width:{size}px;height:{size}px;'
-        f'background:{color};font-size:{fs}px;">{initial}</span>'
+        f'background:{safe_color};font-size:{fs}px;">{initial}</span>'
+    )
+
+
+def _is_safe_color(value: str) -> bool:
+    """Only allow a hex color into an inline style attribute."""
+    if not isinstance(value, str) or not value.startswith("#") or len(value) not in (4, 7):
+        return False
+    return all(c in "0123456789abcdefABCDEF" for c in value[1:])
+
+
+def sdg_badges_html(tags: list) -> str:
+    """Row of small SDG badges for a single report."""
+    if not tags:
+        return ""
+    chips = "".join(
+        f'<span class="sdg-badge" style="background:{t["warna"]}">'
+        f'<span class="n">{t["nomor"]}</span>SDG {t["nomor"]}</span>'
+        for t in tags
+    )
+    return f'<div class="sdg-row">{chips}</div>'
+
+
+def impact_strip_html(impact: dict) -> str:
+    """Compact environmental-cost strip for a report card."""
+    from utils.security import esc
+    if impact.get("resolved"):
+        return (
+            '<div class="eco-strip">'
+            '<div class="eco-metric"><div class="lbl">CO₂ dihindari / tahun</div>'
+            f'<div class="num">{impact["co2_year_kg"]:,} kg</div>'
+            '<div class="sub">setelah perbaikan selesai</div></div>'
+            '<div class="eco-metric"><div class="lbl">Setara</div>'
+            f'<div class="num">{impact["trees_equivalent"]:,} pohon</div>'
+            '<div class="sub">serapan CO₂ per tahun</div></div>'
+            '</div>'
+        ).replace(",", ".")
+    return (
+        '<div class="eco-strip">'
+        '<div class="eco-metric warn"><div class="lbl">CO₂ terbuang / hari</div>'
+        f'<div class="num">{impact["co2_day_kg"]:,} kg</div>'
+        '<div class="sub">selama jalan dibiarkan rusak</div></div>'
+        '<div class="eco-metric warn"><div class="lbl">Akumulasi CO₂</div>'
+        f'<div class="num">{impact["co2_accumulated_kg"]:,} kg</div>'
+        f'<div class="sub">{impact["days_open"]} hari sejak dilaporkan</div></div>'
+        '<div class="eco-metric"><div class="lbl">Setara serapan</div>'
+        f'<div class="num">{impact["trees_equivalent"]:,} pohon</div>'
+        '<div class="sub">CO₂ per tahun jika dibiarkan</div></div>'
+        '</div>'
+    ).replace(",", ".")
+
+
+def eco_card_html(rec: dict) -> str:
+    """Eco-material recommendation card."""
+    from utils.security import esc
+    return (
+        '<div class="eco-card">'
+        '<div class="tag">🌱 Rekomendasi Material Berkelanjutan</div>'
+        f'<div class="name">{esc(rec.get("metode",""))}</div>'
+        f'<div class="desc">{esc(rec.get("deskripsi",""))} {esc(rec.get("catatan",""))}</div>'
+        f'<span class="save">↓ {rec.get("reduksi_persen",0)}% emisi vs aspal panas konvensional</span>'
+        '</div>'
     )
 
 

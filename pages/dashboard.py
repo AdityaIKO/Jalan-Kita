@@ -10,10 +10,10 @@ from utils.ui import (
     inject_css, render_header,
     CHART_AMBER, CHART_INK, CHART_RED, CHART_GREEN, CHART_VIOLET,
 )
-from utils import analytics, auth
+from utils import analytics, auth, sustainability
 
 st.set_page_config(
-    page_title="JalanKita — Dashboard",
+    page_title="JalanKita · Dashboard",
     page_icon="📊", layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -84,11 +84,54 @@ st.markdown("##### Estimasi RAB per Provinsi")
 df_rab = analytics.rab_by_provinsi(reports)
 st.bar_chart(df_rab, x="Provinsi", y="Estimasi RAB", color=CHART_GREEN, height=300)
 
+# ── Dampak Keberlanjutan (AI for Sustainable Future) ───────────────────────────
+st.divider()
+st.markdown("### 🌱 Dampak Keberlanjutan")
+st.caption(
+    "Menerjemahkan kerusakan jalan menjadi dampak iklim: emisi CO₂ dan bahan bakar "
+    "yang terbuang selama jalan dibiarkan rusak, serta emisi yang dihindari setelah diperbaiki."
+)
+
+imp = sustainability.aggregate_impact(reports)
+s1 = st.columns(4)
+def _eco_kpi(col, num, label, sub, mod=""):
+    col.markdown(
+        f'<div class="kpi {mod}"><div class="lbl">{label}</div><div class="num">{num}</div><div class="sub">{sub}</div></div>',
+        unsafe_allow_html=True,
+    )
+_eco_kpi(s1[0], f'{imp["co2_year_open_tonnes"]:,} t'.replace(",", "."), "CO₂ Terbuang / Tahun",
+         f'{imp["open_count"]} laporan aktif', "kpi--danger")
+_eco_kpi(s1[1], f'{imp["co2_year_saved_tonnes"]:,} t'.replace(",", "."), "CO₂ Dihindari / Tahun",
+         f'{imp["resolved_count"]} laporan selesai', "kpi--ok")
+_eco_kpi(s1[2], f'{imp["fuel_year_open_litre"]:,} L'.replace(",", "."), "BBM Terbuang / Tahun",
+         "akibat jalan rusak aktif", "kpi--accent")
+_eco_kpi(s1[3], f'{imp["trees_to_offset"]:,}'.replace(",", "."), "Pohon untuk Offset",
+         "menyerap CO₂ setahun")
+
+st.markdown("<br>", unsafe_allow_html=True)
+st.markdown("##### Kontribusi terhadap Tujuan Pembangunan Berkelanjutan (SDGs)")
+sdg_rows = sustainability.sdg_summary(reports)
+if sdg_rows:
+    cols = st.columns(len(sdg_rows))
+    for col, s in zip(cols, sdg_rows):
+        col.markdown(
+            f'<div class="sdg-tile" style="background:{s["warna"]}">'
+            f'<div class="n">{s["jumlah"]}</div>'
+            f'<div class="g">SDG {s["nomor"]}</div>'
+            f'<div class="c">{s["nama"]}</div></div>',
+            unsafe_allow_html=True,
+        )
+st.caption(
+    f'Asumsi: {sustainability.ASSUMPTIONS["traffic_per_day"]:,} kendaraan/hari per titik, '
+    f'faktor emisi {sustainability.ASSUMPTIONS["co2_kg_per_litre"]} kg CO₂/liter, '
+    f'1 pohon menyerap {sustainability.ASSUMPTIONS["tree_kg_co2_per_year"]:.0f} kg CO₂/tahun.'.replace(",", ".")
+)
+
 # ── Cara skor prioritas dihitung ───────────────────────────────────────────────
 with st.expander("🚦 Bagaimana skor prioritas dihitung?"):
     st.markdown(
         """
-Setiap laporan diberi **skor 0–100** yang menggabungkan tiga faktor, lalu dipetakan ke label:
+Setiap laporan diberi **skor 0 sampai 100** yang menggabungkan tiga faktor, lalu dipetakan ke label:
 
 | Faktor | Bobot |
 |---|---|

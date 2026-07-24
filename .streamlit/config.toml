@@ -10,3 +10,13 @@ font = "sans serif"
 
 [client]
 toolbarMode = "minimal"
+
+[server]
+# Cap uploads to match the image validator (utils.security.validate_image_upload).
+maxUploadSize = 8
+# XSRF protection guards form posts; CORS stays closed for a same-origin app.
+enableXsrfProtection = true
+enableCORS = false
+
+[browser]
+gatherUsageStats = false

@@ -17,11 +17,13 @@ from utils.storage import (
 from utils.geo import report_coords
 from utils.ui import (
     inject_css, render_header, PRIO_COLORS, SEVERITY_COLORS, INK_SOFT, avatar_html,
+    sdg_badges_html, impact_strip_html, eco_card_html,
 )
-from utils import auth
+from utils import auth, sustainability
+from utils.security import esc, validate_image_upload
 
 st.set_page_config(
-    page_title="JalanKita — Feed Komunitas",
+    page_title="JalanKita · Feed Komunitas",
     page_icon="🗺️", layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -161,6 +163,11 @@ for report in filtered:
     p_label = priority_label(p_score)
     p_color = PRIO_COLORS.get(p_label, INK_SOFT)
 
+    # Sustainability layer: environmental cost, eco-material, SDG mapping.
+    impact = sustainability.estimate_impact(report)
+    eco_rec = sustainability.recommend_material(det.get("tipe_kerusakan", ""))
+    sdg = sustainability.sdg_tags(report)
+
     if sla.get("resolved"):
         sla_note = "✓ Selesai dalam SLA"
     elif sla["lewat"]:
@@ -168,12 +175,12 @@ for report in filtered:
     else:
         sla_note = f"{sla['sisa']} hari tersisa"
 
-    # ── Pre-compute assigned banner HTML ──────────────────────────────────────
+    # ── Pre-compute assigned banner HTML (all user text escaped) ──────────────
     if assigned_to:
         by_line = ""
         if report.get("assigned_by"):
-            by_line = f'<div style="font-size:0.74rem;color:var(--ok);margin-top:0.1rem">oleh {report.get("assigned_by","–")} · {report.get("assignment_notes","")}</div>'
-        assigned_banner_html = f'<div class="assigned-banner"><div class="label">Ditugaskan kepada</div><div class="value">{assigned_to}</div>{by_line}</div>'
+            by_line = f'<div style="font-size:0.74rem;color:var(--ok);margin-top:0.1rem">oleh {esc(report.get("assigned_by","–"))} · {esc(report.get("assignment_notes",""))}</div>'
+        assigned_banner_html = f'<div class="assigned-banner"><div class="label">Ditugaskan kepada</div><div class="value">{esc(assigned_to)}</div>{by_line}</div>'
     else:
         assigned_banner_html = ""
 
@@ -182,24 +189,24 @@ for report in filtered:
     <div class="report-card">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem;">
         <div>
-          <div class="meta-line">{rid} · {format_timestamp(report["timestamp"])}</div>
-          <div class="loc-title">{report["lokasi"]}</div>
+          <div class="meta-line">{esc(rid)} · {esc(format_timestamp(report["timestamp"]))}</div>
+          <div class="loc-title">{esc(report["lokasi"])}</div>
           <div class="reporter-chip">
             {avatar_html(pelapor_name, av_color, 22)}
-            {pelapor_name}{' · ✓ diikuti' if following_author else ''}
+            {esc(pelapor_name)}{' · ✓ diikuti' if following_author else ''}
           </div>
         </div>
         <div style="text-align:right; flex-shrink:0;">
-          <span class="status-badge" style="background:{status_color}1a; color:{status_color}; border:1px solid {status_color}44">{status}</span>
+          <span class="status-badge" style="background:{status_color}1a; color:{status_color}; border:1px solid {status_color}44">{esc(status)}</span>
           <div style="margin-top:0.45rem;"><span class="prio-pill" style="background:{p_color}1a; color:{p_color}; border:1px solid {p_color}44;">🚦 {p_label} · {p_score}</span></div>
         </div>
       </div>
 
       <div class="deteksi-row">
-        <div class="deteksi-item"><span class="deteksi-label">Tipe</span><span class="deteksi-val">{det.get("tipe_kerusakan","–")}</span></div>
-        <div class="deteksi-item"><span class="deteksi-label">Tingkat</span><span class="deteksi-val" style="color:{kep_color}">{keparahan}</span></div>
-        <div class="deteksi-item"><span class="deteksi-label">Dimensi</span><span class="deteksi-val">{det.get("estimasi_dimensi","–")}</span></div>
-        <div class="deteksi-item"><span class="deteksi-label">Confidence</span><span class="deteksi-val">{det.get("confidence","–")}</span></div>
+        <div class="deteksi-item"><span class="deteksi-label">Tipe</span><span class="deteksi-val">{esc(det.get("tipe_kerusakan","–"))}</span></div>
+        <div class="deteksi-item"><span class="deteksi-label">Tingkat</span><span class="deteksi-val" style="color:{kep_color}">{esc(keparahan)}</span></div>
+        <div class="deteksi-item"><span class="deteksi-label">Dimensi</span><span class="deteksi-val">{esc(det.get("estimasi_dimensi","–"))}</span></div>
+        <div class="deteksi-item"><span class="deteksi-label">Confidence</span><span class="deteksi-val">{esc(det.get("confidence","–"))}</span></div>
       </div>
 
       <div class="rab-bar"><span class="label">Estimasi Anggaran Perbaikan</span><span class="amount">{format_rupiah(rab.get("total",0))}</span></div>
@@ -209,7 +216,10 @@ for report in filtered:
         <div class="sla-track"><div class="sla-fill" style="width:{sla['persen']}%; background:{sla_color}"></div></div>
       </div>
 
-      <div class="note">🛈 {det.get("catatan","–")}</div>
+      <div class="note">ℹ️ {esc(det.get("catatan","–"))}</div>
+
+      {impact_strip_html(impact)}
+      {sdg_badges_html(sdg)}
 
       {assigned_banner_html}
 
@@ -228,6 +238,19 @@ for report in filtered:
             img = Image.open(foto_path)
             img.thumbnail((600, 600))
             st.image(img, use_container_width=True)
+
+    # ── Dampak lingkungan & material berkelanjutan ────────────────────────────
+    with st.expander("🌱 Dampak Lingkungan & Material Berkelanjutan"):
+        st.markdown(eco_card_html(eco_rec), unsafe_allow_html=True)
+        ec1, ec2, ec3 = st.columns(3)
+        ec1.metric("CO₂ terbuang / tahun", f'{impact["co2_year_kg"]:,} kg'.replace(",", "."))
+        ec2.metric("BBM terbuang / tahun", f'{impact["fuel_year_litre"]:,} L'.replace(",", "."))
+        ec3.metric("Kerugian BBM / tahun", format_rupiah(impact["fuel_cost_year_rp"]))
+        st.caption(
+            f'Estimasi berbasis asumsi lalu lintas {sustainability.ASSUMPTIONS["traffic_per_day"]:,} kendaraan/hari '
+            f'dan faktor emisi {sustainability.ASSUMPTIONS["co2_kg_per_litre"]} kg CO₂/liter. '
+            'Angka bersifat estimasi teknis untuk perbandingan prioritas.'.replace(",", ".")
+        )
 
     # ── Aksi bawah card ────────────────────────────────────────────────────────
     bc1, bc2, bc3 = st.columns([1, 1, 1])
@@ -272,9 +295,9 @@ for report in filtered:
             st.markdown(
                 f'''<div class="comment">{avatar_html(cm.get("nama","?"), c_color, 30)}
                   <div class="body">
-                    <span class="who">{cm.get("nama","Anonim")}</span>
-                    <span class="when"> · {format_timestamp(cm.get("timestamp",""))}</span>
-                    <div class="tx">{cm.get("text","")}</div>
+                    <span class="who">{esc(cm.get("nama","Anonim"))}</span>
+                    <span class="when"> · {esc(format_timestamp(cm.get("timestamp","")))}</span>
+                    <div class="tx">{esc(cm.get("text",""))}</div>
                   </div></div>''',
                 unsafe_allow_html=True,
             )
@@ -316,9 +339,9 @@ for report in filtered:
                     foto_pu = pu.get("foto_path")
                     st.markdown(f"""
                     <div class="progress-item">
-                      <div class="progress-time">{format_timestamp(pu.get("timestamp",""))}</div>
-                      <div class="progress-uploader">👤 {pu.get("uploader","Anonim")}</div>
-                      <div class="progress-desc">{pu.get("deskripsi","–")}</div>
+                      <div class="progress-time">{esc(format_timestamp(pu.get("timestamp","")))}</div>
+                      <div class="progress-uploader">👤 {esc(pu.get("uploader","Anonim"))}</div>
+                      <div class="progress-desc">{esc(pu.get("deskripsi","–"))}</div>
                     </div>
                     """, unsafe_allow_html=True)
                     if foto_pu and Path(foto_pu).exists():
@@ -335,16 +358,24 @@ for report in filtered:
                 foto_progress = st.file_uploader("Foto Bukti (opsional)", type=["jpg","jpeg","png"], key=f"foto_progress_{rid}")
                 submitted = st.form_submit_button("📤 Kirim Update Progress", use_container_width=True)
                 if submitted:
-                    if not deskripsi_progress:
+                    if not deskripsi_progress.strip():
                         st.warning("Deskripsi wajib diisi!")
                     else:
                         foto_bytes = None
                         foto_ext = "jpg"
+                        valid_upload = True
                         if foto_progress:
-                            foto_bytes = foto_progress.read()
-                            foto_ext = foto_progress.name.split(".")[-1].lower()
-                        add_progress_update(rid, uploader_name, deskripsi_progress, foto_bytes, foto_ext)
-                        st.success("Update progress berhasil ditambahkan!")
-                        st.rerun()
+                            candidate = foto_progress.read()
+                            ok_up, msg_up = validate_image_upload(candidate, foto_progress.name)
+                            if not ok_up:
+                                st.error(f"Foto ditolak: {msg_up}")
+                                valid_upload = False
+                            else:
+                                foto_bytes = candidate
+                                foto_ext = foto_progress.name.split(".")[-1].lower()
+                        if valid_upload:
+                            add_progress_update(rid, uploader_name, deskripsi_progress, foto_bytes, foto_ext)
+                            st.success("Update progress berhasil ditambahkan!")
+                            st.rerun()
 
     st.markdown("---")

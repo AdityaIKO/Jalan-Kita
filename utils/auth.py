@@ -1,24 +1,30 @@
 """Account system: users, authentication, follows, and auth UI.
 
 Lightweight and file-backed (data/users.json) to match the rest of the app.
-Passwords are salted + SHA-256 hashed (sufficient for a demo; not production
-crypto). A set of dummy accounts is seeded on first run so the app is usable
-immediately — see DEMO_HINT.
+Passwords use PBKDF2-HMAC-SHA256 (see utils.security); older salted-SHA256
+hashes from earlier builds still verify and are upgraded on next login. Login is
+rate-limited and all rendered user text is HTML-escaped. A set of dummy accounts
+is seeded on first run so the app is usable immediately (see DEMO_HINT).
 """
 from __future__ import annotations
 
 import json
-import hashlib
 import secrets
 from datetime import datetime
 from pathlib import Path
 
 import streamlit as st
 
+from utils import security
+from utils.security import esc
+
 DATA_DIR = Path(__file__).parent.parent / "data"
 USERS_FILE = DATA_DIR / "users.json"
 
-DEMO_HINT = "Akun demo — username **budi**, password **budi123**"
+DEMO_HINT = "Akun demo: username **budi**, password **budi123**"
+
+# Idle session lifetime; a login older than this is treated as expired.
+SESSION_MAX_AGE_SECONDS = 8 * 60 * 60  # 8 hours
 
 # Avatar palette (warm, matches the design system).
 AVATAR_COLORS = ["#B5701A", "#B23A2E", "#3F7A52", "#6E5AA8", "#C2541C", "#2A6F77", "#9A3F6E"]
@@ -37,16 +43,11 @@ _SEED_ACCOUNTS = [
 
 
 # ── Persistence ───────────────────────────────────────────────────────────────
-def _hash(password: str, salt: str) -> str:
-    return hashlib.sha256(f"{salt}${password}".encode("utf-8")).hexdigest()
-
-
 def _make_user(username, password, nama, bio, role, color) -> dict:
-    salt = secrets.token_hex(8)
     return {
         "username": username,
-        "salt": salt,
-        "password_hash": _hash(password, salt),
+        "salt": "",  # legacy field kept for back-compat; PBKDF2 salt is embedded
+        "password_hash": security.hash_password(password),
         "nama": nama,
         "bio": bio,
         "role": role,
@@ -86,10 +87,26 @@ def get_user(username: str) -> dict | None:
 
 # ── Auth operations ───────────────────────────────────────────────────────────
 def authenticate(username: str, password: str) -> bool:
+    """Verify credentials, upgrading legacy hashes on success. No rate limiting
+    here — that is enforced at the UI layer (see render_auth_gate)."""
     u = get_user(username.strip().lower())
     if not u:
         return False
-    return _hash(password, u["salt"]) == u["password_hash"]
+    ok = security.verify_password(password, u.get("password_hash", ""), u.get("salt") or None)
+    if ok and security.needs_rehash(u.get("password_hash", "")):
+        _rehash_password(u["username"], password)
+    return ok
+
+
+def _rehash_password(username: str, password: str) -> None:
+    """Transparently upgrade a stored password to the current hashing scheme."""
+    users = load_users()
+    for u in users:
+        if u["username"] == username:
+            u["password_hash"] = security.hash_password(password)
+            u["salt"] = ""
+            break
+    save_users(users)
 
 
 def register(username: str, password: str, nama: str) -> tuple[bool, str]:
@@ -115,16 +132,23 @@ def update_profile(username: str, nama: str = None, bio: str = None,
     for u in users:
         if u["username"] == username:
             if nama is not None:
-                u["nama"] = nama
+                u["nama"] = nama[:80]
             if bio is not None:
-                u["bio"] = bio
-            if avatar_color is not None:
+                u["bio"] = bio[:280]
+            if avatar_color is not None and _is_hex_color(avatar_color):
                 u["avatar_color"] = avatar_color
             if new_password:
-                u["salt"] = secrets.token_hex(8)
-                u["password_hash"] = _hash(new_password, u["salt"])
+                u["password_hash"] = security.hash_password(new_password)
+                u["salt"] = ""
             break
     save_users(users)
+
+
+def _is_hex_color(value: str) -> bool:
+    """Guard the color field so only a real hex code reaches inline styles."""
+    if not isinstance(value, str) or not value.startswith("#") or len(value) not in (4, 7):
+        return False
+    return all(c in "0123456789abcdefABCDEF" for c in value[1:])
 
 
 def toggle_follow(follower: str, target: str) -> bool:
@@ -158,16 +182,27 @@ def follower_count(username: str) -> int:
 # ── Session ───────────────────────────────────────────────────────────────────
 def current_user() -> dict | None:
     uname = st.session_state.get("auth_user")
-    return get_user(uname) if uname else None
+    if not uname:
+        return None
+    # Expire idle sessions so a stale tab cannot act indefinitely.
+    started = st.session_state.get("auth_started_at", 0)
+    if started and (datetime.now().timestamp() - started) > SESSION_MAX_AGE_SECONDS:
+        logout()
+        return None
+    return get_user(uname)
 
 
 def login_session(username: str) -> None:
     st.session_state.auth_user = username
+    st.session_state.auth_started_at = datetime.now().timestamp()
+    # Rotate a session nonce on each login to reduce fixation risk.
+    st.session_state.auth_nonce = secrets.token_hex(8)
 
 
 def logout() -> None:
     st.session_state.auth_user = None
-    st.session_state.pop("liked_ids", None)
+    for key in ("auth_started_at", "auth_nonce", "liked_ids"):
+        st.session_state.pop(key, None)
 
 
 # ── Auth UI ───────────────────────────────────────────────────────────────────
@@ -184,7 +219,7 @@ def render_auth_gate() -> None:
               <h1>🛣️ JalanKita</h1>
               <p>Komunitas warga yang menjaga jalan tetap aman. Foto kerusakan,
                  AI menghitung anggaran, dan ribuan warga ikut mendorong perbaikan.</p>
-              <div class="auth-feature"><span class="ic">📸</span><span class="tx"><b>Lapor sekali klik</b> — AI mendeteksi & menaksir biaya.</span></div>
+              <div class="auth-feature"><span class="ic">📸</span><span class="tx"><b>Lapor sekali klik.</b> AI mendeteksi dan menaksir biaya.</span></div>
               <div class="auth-feature"><span class="ic">❤️</span><span class="tx"><b>Dukung & komentari</b> laporan tetangga Anda.</span></div>
               <div class="auth-feature"><span class="ic">📊</span><span class="tx"><b>Pantau transparan</b> dari laporan hingga selesai.</span></div>
             </div>
@@ -201,13 +236,23 @@ def render_auth_gate() -> None:
                 u = st.text_input("Username", placeholder="Masukkan username Anda")
                 p = st.text_input("Password", type="password", placeholder="Masukkan password")
                 if st.form_submit_button("Masuk", use_container_width=True):
-                    if not u.strip():
+                    uname = u.strip().lower()
+                    locked, remaining = security.is_locked(uname)
+                    if not uname:
                         st.error("Username belum diisi.")
+                    elif locked:
+                        mins = remaining // 60 + 1
+                        st.error(f"Terlalu banyak percobaan gagal. Coba lagi dalam {mins} menit.")
                     elif authenticate(u, p.strip()):
-                        login_session(u.strip().lower())
+                        security.clear_attempts(uname)
+                        login_session(uname)
                         st.rerun()
                     else:
-                        st.error("Username atau password salah.")
+                        left = security.register_failed_attempt(uname)
+                        if left <= 0:
+                            st.error("Akun dikunci sementara karena terlalu banyak percobaan gagal.")
+                        else:
+                            st.error(f"Username atau password salah. Sisa percobaan: {left}.")
             if st.button("⚡ Masuk cepat sebagai demo (budi)", use_container_width=True):
                 login_session("budi")
                 st.rerun()
@@ -258,7 +303,7 @@ def render_topbar(active: str = "") -> None:
         role = "Admin Dinas PU" if user.get("role") == "admin" else "Warga"
         st.markdown(
             f'<div class="user-chip">{av}'
-            f'<span><span class="nm">{user.get("nama","")}</span><br><span class="rl">{role}</span></span></div>',
+            f'<span><span class="nm">{esc(user.get("nama",""))}</span><br><span class="rl">{role}</span></span></div>',
             unsafe_allow_html=True,
         )
     with c_out:

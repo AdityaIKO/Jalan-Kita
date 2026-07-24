@@ -8,9 +8,10 @@ sys.path.append(str(Path(__file__).parent.parent))
 from utils.storage import load_reports, format_rupiah, format_timestamp, get_status_color
 from utils.ui import inject_css, avatar_html, PRIO_COLORS
 from utils import auth
+from utils.security import esc
 
 st.set_page_config(
-    page_title="JalanKita — Profil Saya",
+    page_title="JalanKita · Profil Saya",
     page_icon="👤", layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -37,11 +38,11 @@ st.markdown(
       <div style="display:flex; gap:1.1rem; align-items:center;">
         {big_av}
         <div>
-          <div class="pname">{me['nama']}</div>
-          <div class="phandle">@{uname} · {role_label}</div>
+          <div class="pname">{esc(me['nama'])}</div>
+          <div class="phandle">@{esc(uname)} · {role_label}</div>
         </div>
       </div>
-      <div class="pbio">{bio}</div>
+      <div class="pbio">{esc(bio)}</div>
       <div class="pstats">
         <div class="pstat"><div class="n">{len(my_reports)}</div><div class="l">Laporan</div></div>
         <div class="pstat"><div class="n">{dukungan}</div><div class="l">Dukungan diterima</div></div>
@@ -68,13 +69,13 @@ with tab_posts:
             <div class="report-card" style="margin-bottom:0.7rem;">
               <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                 <div>
-                  <div class="meta-line">{r['id']} · {format_timestamp(r['timestamp'])}</div>
-                  <div class="loc-title">{r['lokasi']}</div>
+                  <div class="meta-line">{esc(r['id'])} · {esc(format_timestamp(r['timestamp']))}</div>
+                  <div class="loc-title">{esc(r['lokasi'])}</div>
                 </div>
-                <span class="status-badge" style="background:{sc}1a; color:{sc}; border:1px solid {sc}44">{r['status']}</span>
+                <span class="status-badge" style="background:{sc}1a; color:{sc}; border:1px solid {sc}44">{esc(r['status'])}</span>
               </div>
               <div class="engage" style="margin-top:0.7rem;">
-                <span class="it">🧱 <b>{det.get('tipe_kerusakan','–')}</b></span>
+                <span class="it">🧱 <b>{esc(det.get('tipe_kerusakan','–'))}</b></span>
                 <span class="it">💰 <b>{format_rupiah(r.get('rab',{}).get('total',0))}</b></span>
                 <span class="it">❤️ <b>{r.get('likes',0)}</b></span>
                 <span class="it">💬 <b>{len(r.get('comments',[]))}</b></span>
@@ -88,13 +89,13 @@ with tab_posts:
 with tab_activity:
     events = []
     for r in reports:
-        loc = r.get("lokasi", "")
+        loc = esc(r.get("lokasi", ""))
         if r.get("pelapor_username") == uname:
             events.append((r["timestamp"], "📸", f"Membuat laporan di <b>{loc}</b>"))
         for cm in r.get("comments", []):
             if cm.get("username") == uname:
                 events.append((cm.get("timestamp", ""), "💬",
-                               f"Berkomentar di <b>{loc}</b>: <span class='mut'>“{cm.get('text','')}”</span>"))
+                               f"Berkomentar di <b>{loc}</b>: <span class='mut'>“{esc(cm.get('text',''))}”</span>"))
         for pu in r.get("progress_updates", []):
             if pu.get("uploader") == me["nama"]:
                 events.append((pu.get("timestamp", ""), "📋",

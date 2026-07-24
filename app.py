@@ -20,11 +20,12 @@ from utils.storage import (
     priority_label,
 )
 from utils.geo import parse_latlon
-from utils.ui import inject_css, render_header, PRIO_COLORS, avatar_html
-from utils import auth
+from utils.ui import inject_css, render_header, PRIO_COLORS, avatar_html, eco_card_html
+from utils import auth, sustainability
+from utils.security import esc, validate_image_upload
 
 st.set_page_config(
-    page_title="JalanKita — Laporkan Jalan Rusak",
+    page_title="JalanKita · Laporkan Jalan Rusak",
     page_icon="🛣️",
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -76,19 +77,19 @@ with col_left:
     av = avatar_html(pelapor, user.get("avatar_color", "#B5701A"), 30)
     st.markdown(
         f'<div class="reporter-chip" style="margin:0 0 0.6rem;">{av}'
-        f'Melaporkan sebagai <b style="color:var(--ink);margin-left:0.2rem;">{pelapor}</b></div>',
+        f'Melaporkan sebagai <b style="color:var(--ink);margin-left:0.2rem;">{esc(pelapor)}</b></div>',
         unsafe_allow_html=True,
     )
     lokasi = st.text_input("Lokasi Jalan", placeholder="Contoh: Jl. Kaliurang KM 12, Sleman, DIY")
     koordinat = st.text_input(
         "Koordinat GPS (opsional)",
-        placeholder="Contoh: -7.7560, 110.4090 — tempel dari Google Maps",
+        placeholder="Contoh: -7.7560, 110.4090 (salin dari Google Maps)",
         help="Tempel koordinat agar laporan muncul tepat di peta. Kosongkan untuk perkiraan otomatis dari provinsi.",
     )
     if lokasi:
         prov_preview = detect_provinsi(lokasi)
         if koordinat and not parse_latlon(koordinat):
-            st.caption("⚠️ Format koordinat tidak valid — gunakan: lat, lon")
+            st.caption("⚠️ Format koordinat tidak valid. Gunakan format: lat, lon")
         else:
             st.caption(f"🗺️ Terdeteksi wilayah: **{prov_preview}**")
 
@@ -99,23 +100,31 @@ with col_left:
         help="Upload foto langsung dari kamera untuk hasil terbaik",
     )
 
+    upload_ok = False
     if uploaded_file:
         file_bytes = uploaded_file.read()
-        image = Image.open(io.BytesIO(file_bytes))
-        # Buat thumbnail kecil untuk preview (max 800px)
-        thumb = image.copy()
-        thumb.thumbnail((800, 800))
-        st.session_state.uploaded_image = image
-        st.session_state.uploaded_bytes = file_bytes
-        st.image(thumb, caption=f"Preview foto ({uploaded_file.size // 1024} KB)", use_container_width=True)
+        ok, msg = validate_image_upload(file_bytes, uploaded_file.name)
+        if not ok:
+            st.error(f"⚠️ {msg}")
+            st.session_state.uploaded_image = None
+            st.session_state.uploaded_bytes = None
+        else:
+            upload_ok = True
+            image = Image.open(io.BytesIO(file_bytes))
+            # Buat thumbnail kecil untuk preview (max 800px)
+            thumb = image.copy()
+            thumb.thumbnail((800, 800))
+            st.session_state.uploaded_image = image
+            st.session_state.uploaded_bytes = file_bytes
+            st.image(thumb, caption=f"Preview foto ({uploaded_file.size // 1024} KB)", use_container_width=True)
 
     btn_analyze = st.button(
         "🔍 Analisis dengan AI",
-        disabled=not (uploaded_file and lokasi),
+        disabled=not (upload_ok and lokasi),
         use_container_width=True,
     )
-    if not lokasi or not uploaded_file:
-        st.caption("⚠️ Lengkapi lokasi dan unggah foto untuk melanjutkan.")
+    if not lokasi or not upload_ok:
+        st.caption("⚠️ Lengkapi lokasi dan unggah foto yang valid untuk melanjutkan.")
 
 with col_right:
     st.markdown("#### 🤖 Hasil Analisis AI")
@@ -141,7 +150,7 @@ with col_right:
 
     if st.session_state.get("demo_mode") and st.session_state.analysis_result:
         st.markdown(
-            '<span class="demo-pill">⚙️ Mode Demo — estimasi heuristik tanpa API key</span>',
+            '<span class="demo-pill">⚙️ Mode Demo · estimasi heuristik tanpa API key</span>',
             unsafe_allow_html=True,
         )
 
@@ -158,14 +167,14 @@ with col_right:
           </div>
           <table style="width:100%; font-size:0.9rem; border-collapse:collapse;">
             <tr><td style="color:var(--ink-soft); padding:0.35rem 0; width:42%">Tipe Kerusakan</td>
-                <td style="font-weight:700; color:var(--ink)">{det.get('tipe_kerusakan','–')}</td></tr>
+                <td style="font-weight:700; color:var(--ink)">{esc(det.get('tipe_kerusakan','–'))}</td></tr>
             <tr><td style="color:var(--ink-soft); padding:0.35rem 0">Estimasi Dimensi</td>
-                <td style="font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums">{det.get('estimasi_dimensi','–')}</td></tr>
+                <td style="font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums">{esc(det.get('estimasi_dimensi','–'))}</td></tr>
             <tr><td style="color:var(--ink-soft); padding:0.35rem 0">Confidence AI</td>
-                <td style="font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums">{det.get('confidence','–')}</td></tr>
+                <td style="font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums">{esc(det.get('confidence','–'))}</td></tr>
           </table>
           <div class="note" style="margin-top:0.8rem; padding:0.75rem 0.9rem; background:var(--surface-2); border:1px solid var(--line); border-radius:10px;">
-            💬 {det.get('catatan','–')}
+            💬 {esc(det.get('catatan','–'))}
           </div>
         </div>
         """, unsafe_allow_html=True)
@@ -180,7 +189,7 @@ with col_right:
             for item in breakdown:
                 rows_html += f"""
                 <div class="breakdown-row">
-                  <span class="breakdown-item">{item.get('item','–')} <span style="color:var(--ink-faint)">({item.get('volume','–')})</span></span>
+                  <span class="breakdown-item">{esc(item.get('item','–'))} <span style="color:var(--ink-faint)">({esc(item.get('volume','–'))})</span></span>
                   <span class="breakdown-amount">{format_rupiah(item.get('subtotal', 0))}</span>
                 </div>"""
             st.markdown(f"""
@@ -221,6 +230,22 @@ with col_right:
             </div>""",
             unsafe_allow_html=True,
         )
+
+        # ── Sustainability preview: environmental cost + eco-material ──────────
+        preview_report = {
+            "deteksi": st.session_state.analysis_result,
+            "status": "Menunggu",
+            "timestamp": datetime.now().isoformat(),
+        }
+        impact_preview = sustainability.estimate_impact(preview_report)
+        eco_preview = sustainability.recommend_material(
+            st.session_state.analysis_result.get("tipe_kerusakan", "")
+        )
+        st.markdown("#### 🌱 Dampak Keberlanjutan")
+        ic1, ic2 = st.columns(2)
+        ic1.metric("CO₂ terbuang / hari jika dibiarkan", f'{impact_preview["co2_day_kg"]:,} kg'.replace(",", "."))
+        ic2.metric("Setara serapan pohon / tahun", f'{impact_preview["trees_equivalent"]:,} pohon'.replace(",", "."))
+        st.markdown(eco_card_html(eco_preview), unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
