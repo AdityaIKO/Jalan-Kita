@@ -57,26 +57,31 @@ def _make_user(username, password, nama, bio, role, color) -> dict:
     }
 
 
-def _seed() -> list:
-    users = [
+def _seed_records() -> list:
+    """Build the seeded demo accounts (persistence handled by load_users)."""
+    return [
         _make_user(u, p, n, b, r, AVATAR_COLORS[i % len(AVATAR_COLORS)])
         for i, (u, p, n, b, r) in enumerate(_SEED_ACCOUNTS)
     ]
-    save_users(users)
-    return users
 
 
 def load_users() -> list:
-    if not USERS_FILE.exists():
-        return _seed()
-    with open(USERS_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+    """Load users from SQLite, importing legacy users.json or seeds on first run."""
+    from utils import db
+    if db.count("users") == 0:
+        if USERS_FILE.exists():
+            with open(USERS_FILE, "r", encoding="utf-8") as f:
+                initial = json.load(f)
+        else:
+            initial = _seed_records()
+        db.save_all("users", initial)
+        return initial
+    return db.load_all("users")
 
 
 def save_users(users: list) -> None:
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    with open(USERS_FILE, "w", encoding="utf-8") as f:
-        json.dump(users, f, ensure_ascii=False, indent=2)
+    from utils import db
+    db.save_all("users", users)
 
 
 def get_user(username: str) -> dict | None:

@@ -90,6 +90,35 @@ pohon), bukan angka kotak hitam.
 | ⏲️ **Sesi kedaluwarsa** | Sesi menganggur otomatis berakhir setelah 8 jam. |
 | 🔒 **Konfigurasi server** | XSRF aktif, CORS tertutup, batas unggah selaras validator, statistik penggunaan dimatikan (`.streamlit/config.toml`). |
 
+### Responsible-AI: Privasi, Keaslian, Anti-Duplikat (`utils/privacy.py`, `utils/integrity.py`)
+
+Mengubah dua baris "planned" pada tabel Risiko menjadi kontrol nyata:
+
+| Kapabilitas | Penjelasan |
+|---|---|
+| 🔒 **Sensor privasi otomatis** | Sebelum foto tampil publik, model multimodal mendeteksi wajah dan pelat nomor, lalu Pillow memburamkannya. Aktif secara default di form laporan. |
+| 🛡️ **Sinyal keaslian** | Metadata EXIF diperiksa (ada tidaknya, waktu, GPS) untuk memberi skor keaslian dan menandai foto yang berpotensi tangkapan layar atau unduhan. |
+| 🧩 **Deteksi duplikat** | Perceptual hash (dHash) mengenali foto yang sama walau disimpan ulang; digabung cek kedekatan GPS untuk memperingatkan laporan ganda saat pengiriman. |
+| 📍 **Klastering spasial** | Laporan dalam radius ~30 m dikelompokkan; feed menampilkan "N laporan di titik ini" sebagai sinyal prioritas yang lebih kuat. |
+
+### Persistensi Data (`utils/db.py`)
+
+Penyimpanan berpindah dari menulis ulang berkas JSON ke **SQLite** (pustaka standar,
+tanpa dependency): tulis atomik dan transaksional yang aman saat banyak pengguna
+beraksi bersamaan, dengan impor otomatis data JSON lama pada run pertama. API
+penyimpanan tidak berubah sehingga seluruh logika lain tetap sama. Untuk
+persistensi penuh di cloud, arahkan `JALANKITA_DB` ke volume permanen atau ganti
+mesin ini dengan Postgres.
+
+### Lokasi Presisi: GPS Otomatis + Wilayah Berjenjang (`utils/wilayah.py`)
+
+| Kapabilitas | Penjelasan |
+|---|---|
+| 📍 **GPS otomatis dari foto** | Saat foto diunggah, koordinat GPS yang tertanam di metadata foto (lokasi asli pengambilan gambar) dibaca otomatis dan dipakai untuk titik peta. Bebas dependency; jika foto tanpa GPS, pengguna bisa mengisi manual. |
+| 🗂️ **Kolom wilayah terstruktur** | Lokasi disimpan dalam kolom terpisah: Provinsi, Kabupaten/Kota, Kecamatan, Kelurahan/Desa, plus kode wilayah Kemendagri, sehingga pencarian dan kategori lokasi akurat. |
+| ⛓️ **Dropdown berjenjang** | Memilih Provinsi memunculkan pilihan Kabupaten/Kota di dalamnya, lalu Kecamatan, lalu Kelurahan/Desa. Data lengkap 34 provinsi sampai ~80.000 kelurahan dibundel offline di `data/wilayah/`. |
+| 🔎 **Filter feed berjenjang** | Feed komunitas menyaring per Provinsi lalu Kabupaten/Kota, konsisten dengan data terstruktur laporan. |
+
 ### Desain Responsif Penuh
 
 Tipografi dan tata letak kini menyesuaikan otomatis ke semua ukuran layar memakai
@@ -287,7 +316,14 @@ Jalan Kita/
 │   ├── ui.py               # CSS responsif, header, navigasi, komponen keberlanjutan
 │   ├── auth.py             # Akun, PBKDF2, rate-limit login, sesi
 │   ├── security.py         # Escape XSS, hashing, validasi unggahan [v3.0]
-│   └── sustainability.py   # CO₂/BBM terbuang, material hijau, SDG [v3.0]
+│   ├── sustainability.py   # CO₂/BBM terbuang, material hijau, SDG [v3.0]
+│   ├── privacy.py          # Auto-blur wajah & pelat nomor [v3.0]
+│   ├── integrity.py        # Keaslian EXIF, GPS foto, dedup, klastering [v3.0]
+│   ├── db.py               # Mesin penyimpanan SQLite [v3.0]
+│   └── wilayah.py          # Wilayah berjenjang provinsi→kelurahan [v3.0]
+│
+├── data/wilayah/           # Dataset administratif Indonesia (CSV, ~2.5 MB)
+│   ├── provinces.csv · regencies.csv · districts.csv · villages.csv
 │
 ├── data/
 │   ├── seed_data.json      # 5 laporan dummy untuk demo
@@ -337,8 +373,8 @@ Context: [Manajemen Infrastruktur Publik]
 
 | # | Risiko | Sumber | Konsekuensi | Kontrol |
 |---|---|---|---|---|
-| 1 | **Injeksi Laporan Palsu** | Foto Kerusakan (Input) | Sistem memproses foto editan/usang | Live Photo Capturing; validasi output AI |
-| 2 | **Kebocoran Data Sensitif** | Foto Kerusakan (Storage) | Wajah/plat nomor tersimpan tanpa samaran | Auto-blur preprocessing *(planned)* |
+| 1 | **Injeksi Laporan Palsu** | Foto Kerusakan (Input) | Sistem memproses foto editan/usang | ✅ Sinyal keaslian EXIF + perceptual-hash anti-duplikat + klastering spasial (`utils/integrity.py`) |
+| 2 | **Kebocoran Data Sensitif** | Foto Kerusakan (Storage) | Wajah/plat nomor tersimpan tanpa samaran | ✅ Auto-blur wajah & pelat sebelum simpan (`utils/privacy.py`) |
 | 3 | **Bias Representasi Geografis** | CV Model (Training Data) | Gagal deteksi kerusakan di pelosok | Dataset seimbang urban+rural; evaluasi kuartalan |
 | 4 | **Service Dependency** *(baru ditemukan saat build)* | Gemini API | Seluruh fitur AI tidak bisa digunakan saat API down | Fallback message; model lokal *(planned)* |
 

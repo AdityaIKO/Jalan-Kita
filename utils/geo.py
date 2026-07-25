@@ -54,6 +54,22 @@ PROVINSI_CENTROID = {
 # Fallback: geographic centre of Indonesia.
 DEFAULT_CENTER = (-2.50, 118.00)
 
+# National bounding box (with a small margin) used to keep both the map view and
+# any tagged coordinate inside Indonesia. Spans Sabang (Aceh) to Merauke (Papua).
+ID_LAT_MIN, ID_LAT_MAX = -11.5, 6.5
+ID_LON_MIN, ID_LON_MAX = 94.5, 141.5
+# View bounds for the map (a touch tighter than the hard limits above).
+ID_VIEW = {"lat_min": -11.0, "lat_max": 6.1, "lon_min": 95.0, "lon_max": 141.0}
+
+
+def in_indonesia(lat, lon) -> bool:
+    """True when a coordinate falls within Indonesia's bounding box."""
+    try:
+        lat, lon = float(lat), float(lon)
+    except (TypeError, ValueError):
+        return False
+    return ID_LAT_MIN <= lat <= ID_LAT_MAX and ID_LON_MIN <= lon <= ID_LON_MAX
+
 
 def _jitter(seed: str, spread: float = 0.35) -> tuple[float, float]:
     """Deterministic small offset in (lat, lon) derived from a seed string."""
@@ -64,10 +80,15 @@ def _jitter(seed: str, spread: float = 0.35) -> tuple[float, float]:
 
 
 def report_coords(report: dict) -> tuple[float, float] | None:
-    """Return (lat, lon) for a report, or None if it can't be placed."""
+    """Return (lat, lon) for a report, or None if it can't be placed.
+
+    Explicit GPS is only trusted when it lies inside Indonesia; otherwise the
+    report falls back to its province centroid so the map never leaves the
+    country.
+    """
     lat = report.get("lat")
     lon = report.get("lon")
-    if isinstance(lat, (int, float)) and isinstance(lon, (int, float)):
+    if isinstance(lat, (int, float)) and isinstance(lon, (int, float)) and in_indonesia(lat, lon):
         return float(lat), float(lon)
 
     prov = report.get("provinsi") or ""

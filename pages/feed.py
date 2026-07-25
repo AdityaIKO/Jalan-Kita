@@ -14,12 +14,12 @@ from utils.storage import (
     priority_score, priority_label, reports_to_csv,
     PROVINSI_INDONESIA, detect_provinsi,
 )
-from utils.geo import report_coords
+from utils.geo import report_coords, in_indonesia, ID_VIEW
 from utils.ui import (
     inject_css, render_header, PRIO_COLORS, SEVERITY_COLORS, INK_SOFT, avatar_html,
     sdg_badges_html, impact_strip_html, eco_card_html,
 )
-from utils import auth, sustainability
+from utils import auth, sustainability, integrity, wilayah
 from utils.security import esc, validate_image_upload
 
 st.set_page_config(
@@ -49,6 +49,9 @@ st.divider()
 # ── Load data ─────────────────────────────────────────────────────────────────
 reports = load_reports()
 
+# Spatial clustering: how many separate reports describe the same spot.
+cluster_sizes = integrity.cluster_reports(reports)
+
 # ── Stats ──────────────────────────────────────────────────────────────────────
 total = len(reports)
 menunggu = sum(1 for r in reports if r["status"] == "Menunggu")
@@ -70,31 +73,50 @@ for col, (num, label, mod) in zip(stat_cols, stat_defs):
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ── Peta sebaran laporan ───────────────────────────────────────────────────────
-show_map = st.toggle("🗺️ Tampilkan peta sebaran laporan", value=True)
+show_map = st.toggle("🗺️ Tampilkan peta sebaran laporan (wilayah Indonesia)", value=True)
 if show_map:
     import pandas as pd
+    # Every coordinate is already constrained to Indonesia (report_coords falls
+    # back to a province centroid for any out-of-country GPS), so the map only
+    # ever frames Indonesian points and never leaves the country.
     map_rows = []
     for r in reports:
         coords = report_coords(r)
-        if coords:
+        if coords and in_indonesia(*coords):
             map_rows.append({"lat": coords[0], "lon": coords[1]})
     if map_rows:
-        st.map(pd.DataFrame(map_rows), size=110, color="#B5701A", zoom=4)
-        st.caption("Titik memakai koordinat GPS laporan bila tersedia, atau perkiraan pusat provinsi.")
+        st.map(pd.DataFrame(map_rows), size=140, color="#B5701A", zoom=5)
+        st.caption("Peta dibatasi wilayah Indonesia. Titik memakai koordinat GPS laporan bila tersedia, atau perkiraan pusat provinsi.")
     else:
         st.info("Belum ada laporan untuk ditampilkan di peta.")
     st.markdown("<br>", unsafe_allow_html=True)
 
 # ── Filters ────────────────────────────────────────────────────────────────────
-fc1, fc2, fc3, fc4 = st.columns([2, 2, 2, 2])
-with fc1:
-    filter_status = st.selectbox("Filter Status", ["Semua", "Menunggu", "Prioritas Publik", "CSR Dashboard", "Selesai"])
-with fc2:
-    filter_provinsi = st.selectbox("Filter Wilayah", PROVINSI_INDONESIA)
-with fc3:
+fr1 = st.columns(3)
+with fr1[0]:
+    filter_status = st.selectbox("Status", ["Semua", "Menunggu", "Prioritas Publik", "CSR Dashboard", "Selesai"])
+fprov_code = None
+if wilayah.available():
+    provs = wilayah.provinces()
+    with fr1[1]:
+        filter_provinsi = st.selectbox("Provinsi", ["Semua Provinsi"] + [n for _, n in provs])
+        fprov_code = next((c for c, n in provs if n == filter_provinsi), None)
+    with fr1[2]:
+        if fprov_code:
+            kab_opts = ["Semua Kab/Kota"] + [n for _, n in wilayah.regencies(fprov_code)]
+        else:
+            kab_opts = ["Semua Kab/Kota"]
+        filter_kab = st.selectbox("Kabupaten/Kota", kab_opts, disabled=not fprov_code)
+else:
+    with fr1[1]:
+        filter_provinsi = st.selectbox("Wilayah", PROVINSI_INDONESIA)
+    filter_kab = "Semua Kab/Kota"
+
+fr2 = st.columns([1, 2])
+with fr2[0]:
     sort_by = st.selectbox("Urutkan", ["Prioritas", "Terbaru", "Terlama", "Terpopuler"])
-with fc4:
-    search = st.text_input("Cari lokasi...", placeholder="Ketik nama jalan...")
+with fr2[1]:
+    search = st.text_input("Cari lokasi", placeholder="Ketik nama jalan atau wilayah...")
 
 following = set(me.get("following", []))
 only_following = st.checkbox(
@@ -108,8 +130,10 @@ if only_following:
     filtered = [r for r in filtered if r.get("pelapor_username") in following]
 if filter_status != "Semua":
     filtered = [r for r in filtered if r["status"] == filter_status]
-if filter_provinsi != "Semua Wilayah":
-    filtered = [r for r in filtered if detect_provinsi(r.get("lokasi","")) == filter_provinsi or r.get("provinsi","") == filter_provinsi]
+if filter_provinsi not in ("Semua Wilayah", "Semua Provinsi"):
+    filtered = [r for r in filtered if r.get("provinsi", "") == filter_provinsi or detect_provinsi(r.get("lokasi", "")) == filter_provinsi]
+if filter_kab != "Semua Kab/Kota":
+    filtered = [r for r in filtered if r.get("kabupaten", "") == filter_kab]
 if search:
     filtered = [r for r in filtered if search.lower() in r["lokasi"].lower()]
 if sort_by == "Terpopuler":
@@ -168,6 +192,19 @@ for report in filtered:
     eco_rec = sustainability.recommend_material(det.get("tipe_kerusakan", ""))
     sdg = sustainability.sdg_tags(report)
 
+    # Responsible-AI trust indicators: duplicates, privacy, authenticity.
+    chips = []
+    cluster_n = cluster_sizes.get(rid)
+    if cluster_n:
+        chips.append(f'<span class="trust-chip cluster">🧩 {cluster_n} laporan di titik ini</span>')
+    if report.get("foto_redacted"):
+        chips.append('<span class="trust-chip priv">🔒 Privasi tersensor</span>')
+    ex_label = report.get("exif_label")
+    if ex_label:
+        tone = {"Kuat": "ok", "Sedang": "warn", "Perlu dicek": "danger"}.get(ex_label, "warn")
+        chips.append(f'<span class="trust-chip {tone}">🛡️ Keaslian: {esc(ex_label)}</span>')
+    trust_html = f'<div class="trust-row">{"".join(chips)}</div>' if chips else ""
+
     if sla.get("resolved"):
         sla_note = "✓ Selesai dalam SLA"
     elif sla["lewat"]:
@@ -219,6 +256,7 @@ for report in filtered:
       <div class="note">ℹ️ {esc(det.get("catatan","–"))}</div>
 
       {impact_strip_html(impact)}
+      {trust_html}
       {sdg_badges_html(sdg)}
 
       {assigned_banner_html}

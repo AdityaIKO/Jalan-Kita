@@ -19,9 +19,9 @@ from utils.storage import (
     priority_score,
     priority_label,
 )
-from utils.geo import parse_latlon
+from utils.geo import parse_latlon, in_indonesia
 from utils.ui import inject_css, render_header, PRIO_COLORS, avatar_html, eco_card_html
-from utils import auth, sustainability
+from utils import auth, sustainability, integrity, privacy, wilayah
 from utils.security import esc, validate_image_upload
 
 st.set_page_config(
@@ -46,6 +46,9 @@ if "report_submitted" not in st.session_state:
     st.session_state.report_submitted = False
 if "demo_mode" not in st.session_state:
     st.session_state.demo_mode = False
+for _k in ("exif_info", "foto_phash", "similar_reports", "exif_gps"):
+    if _k not in st.session_state:
+        st.session_state[_k] = None
 if "liked_ids" not in st.session_state:
     st.session_state.liked_ids = set()
 
@@ -80,24 +83,13 @@ with col_left:
         f'Melaporkan sebagai <b style="color:var(--ink);margin-left:0.2rem;">{esc(pelapor)}</b></div>',
         unsafe_allow_html=True,
     )
-    lokasi = st.text_input("Lokasi Jalan", placeholder="Contoh: Jl. Kaliurang KM 12, Sleman, DIY")
-    koordinat = st.text_input(
-        "Koordinat GPS (opsional)",
-        placeholder="Contoh: -7.7560, 110.4090 (salin dari Google Maps)",
-        help="Tempel koordinat agar laporan muncul tepat di peta. Kosongkan untuk perkiraan otomatis dari provinsi.",
-    )
-    if lokasi:
-        prov_preview = detect_provinsi(lokasi)
-        if koordinat and not parse_latlon(koordinat):
-            st.caption("⚠️ Format koordinat tidak valid. Gunakan format: lat, lon")
-        else:
-            st.caption(f"🗺️ Terdeteksi wilayah: **{prov_preview}**")
 
+    # ── Foto lebih dulu, agar koordinat GPS bisa dibaca dari metadata foto ─────
     st.markdown("#### 📸 Foto Kerusakan")
     uploaded_file = st.file_uploader(
         "Upload foto jalan rusak",
         type=["jpg", "jpeg", "png", "webp"],
-        help="Upload foto langsung dari kamera untuk hasil terbaik",
+        help="Foto langsung dari kamera ponsel memberi hasil terbaik dan sering menyimpan lokasi GPS.",
     )
 
     upload_ok = False
@@ -108,30 +100,120 @@ with col_left:
             st.error(f"⚠️ {msg}")
             st.session_state.uploaded_image = None
             st.session_state.uploaded_bytes = None
+            st.session_state.exif_gps = None
         else:
             upload_ok = True
             image = Image.open(io.BytesIO(file_bytes))
-            # Buat thumbnail kecil untuk preview (max 800px)
             thumb = image.copy()
             thumb.thumbnail((800, 800))
             st.session_state.uploaded_image = image
             st.session_state.uploaded_bytes = file_bytes
             st.image(thumb, caption=f"Preview foto ({uploaded_file.size // 1024} KB)", use_container_width=True)
+            # Auto GPS tagging from the photo's embedded location (Indonesia only).
+            gps = integrity.gps_from_exif(image)
+            if gps and not in_indonesia(*gps):
+                st.caption("📍 Lokasi GPS pada foto berada di luar wilayah Indonesia dan diabaikan.")
+                gps = None
+            st.session_state.exif_gps = gps
+            if gps:
+                st.success(f"📍 Lokasi GPS terbaca otomatis dari foto: {gps[0]}, {gps[1]}")
+
+    blur_privacy = st.checkbox(
+        "🔒 Sensor privasi otomatis (blur wajah & pelat nomor)",
+        value=True,
+        help="AI mendeteksi wajah dan pelat nomor, lalu memburamkannya sebelum foto tampil publik.",
+    )
+
+    # ── Lokasi berjenjang: Provinsi → Kabupaten/Kota → Kecamatan → Kelurahan ──
+    st.markdown("#### 📍 Lokasi")
+    prov_name = kab_name = kec_name = kel_name = ""
+    prov_code = kab_code = kec_code = kel_code = None
+
+    if wilayah.available():
+        provs = wilayah.provinces()
+        prov_sel = st.selectbox("Provinsi", ["Pilih Provinsi"] + [n for _, n in provs])
+        prov_code = next((c for c, n in provs if n == prov_sel), None)
+        prov_name = prov_sel if prov_code else ""
+
+        if prov_code:
+            kabs = wilayah.regencies(prov_code)
+            kab_sel = st.selectbox("Kabupaten/Kota", ["Pilih Kabupaten/Kota"] + [n for _, n in kabs])
+            kab_code = next((c for c, n in kabs if n == kab_sel), None)
+            kab_name = kab_sel if kab_code else ""
+
+            if kab_code:
+                kecs = wilayah.districts(kab_code)
+                kec_sel = st.selectbox("Kecamatan (opsional)", ["Pilih Kecamatan"] + [n for _, n in kecs])
+                kec_code = next((c for c, n in kecs if n == kec_sel), None)
+                kec_name = kec_sel if kec_code else ""
+
+                if kec_code:
+                    kels = wilayah.villages(kec_code)
+                    kel_sel = st.selectbox("Kelurahan/Desa (opsional)", ["Pilih Kelurahan/Desa"] + [n for _, n in kels])
+                    kel_code = next((c for c, n in kels if n == kel_sel), None)
+                    kel_name = kel_sel if kel_code else ""
+
+        jalan = st.text_input("Nama jalan / patokan", placeholder="Contoh: Jl. Kaliurang KM 12")
+        loc_ok = bool(jalan.strip() and prov_name and kab_name)
+    else:
+        jalan = st.text_input("Lokasi Jalan", placeholder="Contoh: Jl. Kaliurang KM 12, Sleman, DIY")
+        loc_ok = bool(jalan.strip())
+
+    # Compose a human-readable location string, most specific first.
+    lokasi = ", ".join([p for p in [jalan.strip(), kel_name, kec_name, kab_name, prov_name] if p])
+
+    koordinat = st.text_input(
+        "Koordinat GPS (opsional)",
+        placeholder="Terisi otomatis dari foto, atau salin dari Google Maps: -7.7560, 110.4090",
+        help="Dibaca otomatis dari metadata foto bila tersedia. Isi manual untuk menimpa.",
+    )
+    manual_coord = parse_latlon(koordinat)
+    if koordinat and not manual_coord:
+        st.caption("⚠️ Format koordinat tidak valid. Gunakan format: lat, lon")
+    elif manual_coord and not in_indonesia(*manual_coord):
+        st.caption("⚠️ Koordinat berada di luar wilayah Indonesia dan tidak akan dipakai.")
+        manual_coord = None
 
     btn_analyze = st.button(
         "🔍 Analisis dengan AI",
-        disabled=not (upload_ok and lokasi),
+        disabled=not (upload_ok and loc_ok),
         use_container_width=True,
     )
-    if not lokasi or not upload_ok:
-        st.caption("⚠️ Lengkapi lokasi dan unggah foto yang valid untuk melanjutkan.")
+    if not loc_ok or not upload_ok:
+        st.caption("⚠️ Lengkapi foto, Provinsi, Kabupaten/Kota, dan nama jalan untuk melanjutkan.")
 
 with col_right:
     st.markdown("#### 🤖 Hasil Analisis AI")
 
     if btn_analyze and uploaded_file and lokasi and pelapor:
+        source_image = st.session_state.uploaded_image
+
+        # ── Authenticity signals read from the ORIGINAL photo's metadata ──────
+        st.session_state.exif_info = integrity.exif_signals(source_image)
+
+        # ── Privacy: detect & blur faces / plates before anything is stored ───
+        if blur_privacy:
+            with st.spinner("🔒 Menyensor wajah & pelat nomor..."):
+                red = privacy.redact(source_image)
+            source_image = red["image"]
+            # The redacted image becomes what we analyse and store.
+            buf = io.BytesIO()
+            source_image.save(buf, format="JPEG", quality=88)
+            st.session_state.uploaded_bytes = buf.getvalue()
+            st.session_state.uploaded_image = source_image
+            if red["available"] and red["blurred_count"]:
+                st.info(f"🔒 {red['blurred_count']} area sensitif (wajah/pelat) telah disensor otomatis.")
+            elif not red["available"]:
+                st.caption("🔒 Sensor otomatis butuh API key; foto asli tetap dipakai untuk demo ini.")
+
+        # ── Perceptual fingerprint + duplicate check ──────────────────────────
+        st.session_state.foto_phash = integrity.dhash(source_image)
+        coords_now = manual_coord or st.session_state.get("exif_gps")
+        similar = integrity.find_similar(st.session_state.foto_phash, coords_now, load_reports())
+        st.session_state.similar_reports = similar
+
         with st.spinner("🔍 Computer Vision sedang menganalisis kerusakan..."):
-            result_cv = analyze_image(st.session_state.uploaded_image)
+            result_cv = analyze_image(source_image)
         if result_cv["success"]:
             st.session_state.analysis_result = result_cv["data"]
             st.session_state.demo_mode = result_cv.get("demo", False)
@@ -151,6 +233,27 @@ with col_right:
     if st.session_state.get("demo_mode") and st.session_state.analysis_result:
         st.markdown(
             '<span class="demo-pill">⚙️ Mode Demo · estimasi heuristik tanpa API key</span>',
+            unsafe_allow_html=True,
+        )
+
+    # ── Duplicate warning (soft) ──────────────────────────────────────────────
+    if st.session_state.analysis_result and st.session_state.get("similar_reports"):
+        sims = st.session_state.similar_reports
+        ids = ", ".join(esc(f"{s['id']} ({s['alasan']})") for s in sims[:3])
+        st.warning(
+            f"🧩 Ditemukan {len(sims)} laporan serupa: {ids}. "
+            "Jika ini kerusakan yang sama, dukung laporan yang ada alih-alih membuat baru."
+        )
+
+    # ── Authenticity signal ───────────────────────────────────────────────────
+    if st.session_state.analysis_result and st.session_state.get("exif_info"):
+        ex = st.session_state.exif_info
+        tone = {"Kuat": "#3F7A52", "Sedang": "#B5701A", "Perlu dicek": "#B23A2E"}.get(ex["label"], "#6B6155")
+        st.markdown(
+            f'<div style="font-size:0.8rem; margin:0.2rem 0 0.4rem;">'
+            f'<b style="color:{tone}">🛡️ Keaslian foto: {ex["label"]} ({ex["score"]}/100)</b>'
+            + (f' · <span style="color:var(--ink-soft)">{esc(ex["flags"][0])}</span>' if ex["flags"] else "")
+            + "</div>",
             unsafe_allow_html=True,
         )
 
@@ -258,13 +361,20 @@ with col_right:
             if st.session_state.uploaded_bytes:
                 foto_path = save_report_foto(st.session_state.uploaded_bytes, new_id)
 
-            coords = parse_latlon(koordinat)
+            coords = manual_coord or st.session_state.get("exif_gps")
+            provinsi_final = prov_name or detect_provinsi(lokasi)
             new_report = {
                 "id": new_id,
                 "pelapor": pelapor,
                 "pelapor_username": user["username"],
                 "lokasi": lokasi,
-                "provinsi": detect_provinsi(lokasi),
+                "jalan": jalan.strip(),
+                "provinsi": provinsi_final,
+                "kabupaten": kab_name,
+                "kecamatan": kec_name,
+                "kelurahan": kel_name,
+                "wilayah_kode": kel_code or kec_code or kab_code or prov_code or "",
+                "gps_dari_foto": bool(st.session_state.get("exif_gps")) and not manual_coord,
                 "timestamp": datetime.now().isoformat(),
                 "foto_path": foto_path,
                 "lat": coords[0] if coords else None,
@@ -281,6 +391,11 @@ with col_right:
                 "assigned_by": "",
                 "assignment_notes": "",
                 "progress_updates": [],
+                # Responsible-AI metadata
+                "foto_phash": st.session_state.get("foto_phash"),
+                "foto_redacted": bool(blur_privacy),
+                "exif_score": (st.session_state.get("exif_info") or {}).get("score"),
+                "exif_label": (st.session_state.get("exif_info") or {}).get("label"),
             }
             add_report(new_report)
             st.session_state.report_submitted = True

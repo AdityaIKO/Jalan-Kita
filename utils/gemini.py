@@ -54,6 +54,20 @@ Jika gambar bukan foto jalan atau tidak ada kerusakan terdeteksi, set tipe_kerus
 Berikan hanya JSON, tanpa penjelasan tambahan.
 """
 
+PROMPT_PII = """
+Deteksi SEMUA wajah manusia dan pelat nomor kendaraan yang terlihat pada gambar.
+Kembalikan JSON murni (tanpa markdown) dalam format:
+{
+  "regions": [
+    {"tipe": "wajah", "box": [ymin, xmin, ymax, xmax]},
+    {"tipe": "plat", "box": [ymin, xmin, ymax, xmax]}
+  ]
+}
+Koordinat box ternormalisasi pada skala 0 sampai 1000 (0 = tepi atas/kiri, 1000 = tepi bawah/kanan).
+Jika tidak ada wajah atau pelat nomor, kembalikan {"regions": []}.
+Berikan hanya JSON.
+"""
+
 PROMPT_RAB = """
 Kamu adalah quantity surveyor infrastruktur jalan yang berpengalaman.
 Berdasarkan data kerusakan jalan berikut, buat estimasi Rencana Anggaran Biaya (RAB) perbaikan.
@@ -191,6 +205,26 @@ def analyze_image(image: Image.Image) -> dict:
         # Graceful degradation: keep the demo usable even if the API fails.
         return {"success": True, "data": _demo_analysis(image), "demo": True,
                 "warning": f"API tidak tersedia ({e}); menggunakan estimasi heuristik."}
+
+
+def detect_pii(image: Image.Image) -> dict:
+    """Detect faces and licence plates for privacy redaction.
+
+    Returns ``{success, regions, demo}``. In offline demo mode there is no
+    detector, so ``regions`` is empty and ``demo`` is True.
+    """
+    if not HAS_API:
+        return {"success": True, "regions": [], "demo": True}
+    try:
+        from google.genai import types
+        result = _call_with_retry([
+            types.Part.from_bytes(data=pil_to_bytes(image), mime_type="image/jpeg"),
+            PROMPT_PII,
+        ])
+        regions = result.get("regions", []) if isinstance(result, dict) else []
+        return {"success": True, "regions": regions, "demo": False}
+    except Exception as e:
+        return {"success": False, "regions": [], "demo": False, "error": str(e)}
 
 
 def generate_rab(deteksi: dict, lokasi: str) -> dict:

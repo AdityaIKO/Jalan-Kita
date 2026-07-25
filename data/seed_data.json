@@ -2,7 +2,7 @@
   {
     "id": "RPT-001",
     "pelapor": "Budi Santoso",
-    "lokasi": "Jl. Kaliurang KM 12, Sleman, DIY",
+    "lokasi": "Jl. Kaliurang KM 12, Kabupaten Sleman, DI Yogyakarta",
     "timestamp": "2026-06-15T15:31:33",
     "foto_filename": null,
     "deteksi": {
@@ -59,12 +59,18 @@
     "status": "Prioritas Publik",
     "likes": 134,
     "lat": -7.756,
-    "lon": 110.409
+    "lon": 110.409,
+    "provinsi": "DI Yogyakarta",
+    "kabupaten": "Kabupaten Sleman",
+    "kecamatan": "",
+    "kelurahan": "",
+    "wilayah_kode": "3404",
+    "jalan": "Jl. Kaliurang KM 12"
   },
   {
     "id": "RPT-002",
     "pelapor": "Dewi Rahayu",
-    "lokasi": "Jl. Parangtritis KM 5, Bantul, DIY",
+    "lokasi": "Jl. Parangtritis KM 5, Kabupaten Bantul, DI Yogyakarta",
     "timestamp": "2026-06-16T15:31:33",
     "foto_filename": null,
     "deteksi": {
@@ -127,12 +133,18 @@
     "status": "Menunggu",
     "likes": 47,
     "lat": null,
-    "lon": null
+    "lon": null,
+    "provinsi": "DI Yogyakarta",
+    "kabupaten": "Kabupaten Bantul",
+    "kecamatan": "",
+    "kelurahan": "",
+    "wilayah_kode": "3402",
+    "jalan": "Jl. Parangtritis KM 5"
   },
   {
     "id": "RPT-003",
     "pelapor": "Ahmad Fauzi",
-    "lokasi": "Jl. Wonosari KM 8, Gunungkidul, DIY",
+    "lokasi": "Jl. Wonosari KM 8, Kabupaten Gunung Kidul, DI Yogyakarta",
     "timestamp": "2026-06-10T15:31:33",
     "foto_filename": null,
     "deteksi": {
@@ -183,12 +195,18 @@
     "status": "CSR Dashboard",
     "likes": 89,
     "lat": null,
-    "lon": null
+    "lon": null,
+    "provinsi": "DI Yogyakarta",
+    "kabupaten": "Kabupaten Gunung Kidul",
+    "kecamatan": "",
+    "kelurahan": "",
+    "wilayah_kode": "3403",
+    "jalan": "Jl. Wonosari KM 8"
   },
   {
     "id": "RPT-004",
     "pelapor": "Siti Nurhaliza",
-    "lokasi": "Jl. Godean KM 3, Sleman, DIY",
+    "lokasi": "Jl. Godean KM 3, Kabupaten Sleman, DI Yogyakarta",
     "timestamp": "2026-06-12T15:31:33",
     "foto_filename": null,
     "deteksi": {
@@ -227,12 +245,18 @@
     "status": "Selesai",
     "likes": 23,
     "lat": null,
-    "lon": null
+    "lon": null,
+    "provinsi": "DI Yogyakarta",
+    "kabupaten": "Kabupaten Sleman",
+    "kecamatan": "",
+    "kelurahan": "",
+    "wilayah_kode": "3404",
+    "jalan": "Jl. Godean KM 3"
   },
   {
     "id": "RPT-005",
     "pelapor": "Rizki Pratama",
-    "lokasi": "Jl. Solo KM 15, Klaten, Jawa Tengah",
+    "lokasi": "Jl. Solo KM 15, Kabupaten Klaten, Jawa Tengah",
     "timestamp": "2026-06-19T15:31:33",
     "foto_filename": null,
     "deteksi": {
@@ -283,6 +307,12 @@
     "status": "Menunggu",
     "likes": 12,
     "lat": -7.8014,
-    "lon": 110.3647
+    "lon": 110.3647,
+    "provinsi": "Jawa Tengah",
+    "kabupaten": "Kabupaten Klaten",
+    "kecamatan": "",
+    "kelurahan": "",
+    "wilayah_kode": "3310",
+    "jalan": "Jl. Solo KM 15"
   }
 ]

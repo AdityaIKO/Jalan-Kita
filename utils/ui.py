@@ -287,6 +287,15 @@ GLOBAL_CSS = """
   .eco-card .desc { font-size:0.82rem; color:var(--ink-soft); margin-top:0.25rem; line-height:1.45; }
   .eco-card .save { display:inline-block; margin-top:0.5rem; background:var(--ok); color:#fff; font-weight:800; font-size:0.72rem; border-radius:999px; padding:0.2rem 0.7rem; }
 
+  /* Responsible-AI trust indicators */
+  .trust-row { display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.7rem; }
+  .trust-chip { display:inline-flex; align-items:center; gap:0.3rem; font-size:0.7rem; font-weight:700; border-radius:8px; padding:0.22rem 0.6rem; border:1px solid transparent; }
+  .trust-chip.cluster { background:oklch(0.95 0.03 62); color:oklch(0.45 0.11 58); border-color:oklch(0.86 0.06 62); }
+  .trust-chip.priv { background:oklch(0.95 0.02 285); color:oklch(0.45 0.11 285); border-color:oklch(0.86 0.05 285); }
+  .trust-chip.ok { background:oklch(0.95 0.03 152); color:oklch(0.42 0.10 152); border-color:oklch(0.85 0.05 152); }
+  .trust-chip.warn { background:oklch(0.96 0.03 75); color:oklch(0.48 0.10 62); border-color:oklch(0.86 0.06 70); }
+  .trust-chip.danger { background:oklch(0.96 0.03 28); color:oklch(0.50 0.14 28); border-color:oklch(0.86 0.06 28); }
+
   .sdg-row { display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.7rem; }
   .sdg-badge { display:inline-flex; align-items:center; gap:0.35rem; border-radius:8px; padding:0.24rem 0.6rem; font-size:0.7rem; font-weight:800; color:#fff; }
   .sdg-badge .n { background:rgba(255,255,255,0.28); border-radius:5px; padding:0 0.32rem; font-variant-numeric:tabular-nums; }

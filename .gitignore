@@ -5,6 +5,9 @@
 # Generated data (user reports, accounts & uploaded photos)
 data/reports.json
 data/users.json
+data/jalankita.db
+data/jalankita.db-wal
+data/jalankita.db-shm
 uploads/
 
 # Python cache

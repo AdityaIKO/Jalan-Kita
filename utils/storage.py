@@ -53,6 +53,16 @@ _DEFAULT_FIELDS = {
     "demo_mode": bool,
     "comments": list,
     "pelapor_username": str,
+    "foto_phash": lambda: None,
+    "foto_redacted": bool,
+    "exif_score": lambda: None,
+    "exif_label": str,
+    "jalan": str,
+    "kabupaten": str,
+    "kecamatan": str,
+    "kelurahan": str,
+    "wilayah_kode": str,
+    "gps_dari_foto": bool,
 }
 
 # Avatar palette mirror (matches utils.auth.AVATAR_COLORS) for deterministic
@@ -111,18 +121,23 @@ def add_comment(report_id: str, username: str, nama: str, text: str) -> list:
 
 
 def load_reports() -> list:
-    if not REPORTS_FILE.exists():
-        seed = load_seed_data()
-        save_reports(seed)
-        return seed
-    with open(REPORTS_FILE, "r", encoding="utf-8") as f:
-        return [_migrate(r) for r in json.load(f)]
+    """Load reports from SQLite, importing legacy JSON or seed data on first run."""
+    from utils import db
+    if db.count("reports") == 0:
+        # One-time import: prefer an existing reports.json, else the seed set.
+        if REPORTS_FILE.exists():
+            with open(REPORTS_FILE, "r", encoding="utf-8") as f:
+                initial = [_migrate(r) for r in json.load(f)]
+        else:
+            initial = load_seed_data()
+        db.save_all("reports", initial)
+        return initial
+    return [_migrate(r) for r in db.load_all("reports")]
 
 
 def save_reports(reports: list) -> None:
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    with open(REPORTS_FILE, "w", encoding="utf-8") as f:
-        json.dump(reports, f, ensure_ascii=False, indent=2)
+    from utils import db
+    db.save_all("reports", reports)
 
 
 def load_seed_data() -> list:
